@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+     <title>User Profile</title>
+     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+     <script src="app.js"></script>
+  </head>
+  <body>
+    <script type="text/javascript">
+        function signout () {
+            clearAuthToken();
+            refreshApp();
+        }
+    
+        if (! hasAuthToken()) {
+            if (urlParam("code")) {
+                completeAuth();
+            } else {
+                document.body.innerHTML += "<p>Not yet authorized</p>";
+                document.body.innerHTML += "<p><input type='submit' value='Sign In' onClick='authorize()'></p>";
+            }
+        } else {
+            $.when(getPatientName())
+             .then(function (name) {
+                document.body.innerHTML += "<p>" + new Date() + "</p>";
+                document.body.innerHTML += "<p>Current patient: " + name + "</p>";
+                document.body.innerHTML += "<p><input type='submit' value='Sign Out' onClick='signout()'></p>";
+             })
+             .fail(function () {
+                clearAuthToken();
+                document.body.innerHTML += "<p>Authorization token appears to be invalid</p>";
+                document.body.innerHTML += "<p><input type='submit' value='Sign In' onClick='authorize()'></p>";
+             });
+        }
+    </script>
+  </body>
+</html>
