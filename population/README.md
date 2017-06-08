@@ -38,6 +38,6 @@ You can launch it with a patient and then it will only count the meds of the
 selected patient. Otherwise, it will find all the patients that are taking medications.
 
 IMPORTANT! Be careful if launching without a patient. Depending on the data available,
-the app may do many requests, put the server on a heavy load and it may take a long
+the app may do many requests, put the server under heavy load and it may take a long
 time to compute the final results.
 
