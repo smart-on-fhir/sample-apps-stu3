@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sample app</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+        <script src="node_modules/fhirclient/fhir-client.js"></script>
+    </head>
+    <body>
+        <pre></pre>
+        <script type="text/javascript">
+            function log(txt) {
+                document.getElementsByTagName("pre")[0].innerText += txt + "\n";
+            }
+
+            FHIR.oauth2.ready(function(client) {
+                $.when(client.user.read()).then(
+                    function(user){
+                        log("User: " + user);
+                        log("Token Response:\n" + client.tokenResponse);
+                    },
+                    function(error){
+                        log("Error:\n" + error);
+                    }
+                );
+            });
+        </script>
+    </body>
+</html>
