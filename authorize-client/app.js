@@ -109,11 +109,10 @@ function getUserName() {
         $.when(user.read())
         .then(function(pt) {
             if (pt) {
-                var name;
-                if (pt.resourceType === "Practitioner" || pt.resourceType === "RelatedPerson") {
-                    ret.resolve(getHumanName(pt.name));
-                }
-                else if (pt.resourceType === "Patient") {
+                if (pt.resourceType === "Practitioner" ||
+                    pt.resourceType === "RelatedPerson" ||
+                    pt.resourceType === "Patient")
+                {
                     ret.resolve(getHumanName(pt.name[0]));
                 }
                 else {
@@ -127,6 +126,7 @@ function getUserName() {
         .fail(function(error) {
             window.SMART = smart
             console.log(smart)
+            console.log(error)
             ret.reject("Could not fetch user name: " + error);
         });
     });
