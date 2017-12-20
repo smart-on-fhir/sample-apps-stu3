@@ -1,0 +1,15 @@
+{
+  "name": "sample-backend-service-bulk-files-app",
+  "version": "1.0.0",
+  "description": "Terminal app that can run as a backend service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ."
+  },
+  "dependencies": {
+    "base64-url": "^2.0.1",
+    "colors": "^1.1.2",
+    "jsonwebtoken": "^8.1.0",
+    "request": "^2.83.0"
+  }
+}
