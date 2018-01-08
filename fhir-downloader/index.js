@@ -15,6 +15,7 @@ let ACCESS_TOKEN;
 // You can set this env var to "/dev/null"
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || `${__dirname}/downloads`;
 
+
 function downloadFhir() {
     
     if (!ACCESS_TOKEN) {
@@ -36,8 +37,15 @@ function downloadFhir() {
             return waitForFiles(res.headers["content-location"]);
         }
     )
+    .then(files => {
+        let table = lib.createTable(files);
+        table.log();
+        process.stdout.write("\r\033[?25l"); // hide cursor
+        return table;
+    })
     .then(downloadFile)
     .catch(err => {
+        process.stdout.write("\r\033[?25h"); // show cursor
         console.error(`Download failed: ${err}`.red);
         process.exit(1);
     });
@@ -69,39 +77,54 @@ function waitForFiles(url, timeToWait = 0) {
     });
 }
 
-function downloadFile(files) {
-    if (files.length) {
-        let url = files.shift();
-
+function downloadFile(table) {
+    let file = table.next();
+    if (file) {
         return new Promise((resolve, reject) => {
-            let fileName = url.split("/").pop(), n = 0;
-            process.stdout.write(`Downloading file ${fileName}: ... `);
+            file.status = "Downloading";
+            table.log();
 
-            lib.requestPromise({ url }).then(res => {
-                if (DOWNLOAD_DIR && DOWNLOAD_DIR != "/dev/null") {
-                    fs.writeFile(
-                        `${DOWNLOAD_DIR}/${fileName}`,
-                        res.body,
-                        error => {
-                            if (error) {
-                                return reject(error)
-                            }
-                            resolve()
-                        }
-                    )
-                } else {
-                    resolve()
+            request({ strictSSL: false, url: file.url }, function(error, res) {
+                if (error) {
+                    return reject(error);
                 }
-            }, reject);
-        }).then(() => {
-            process.stdout.write(`Done!\n`.green);
-            return downloadFile(files)
+                if (res.statusCode >= 400) {
+                    return reject(new Error(
+                        `${res.statusCode}: ${res.statusMessage}\n${res.body}`
+                    ));
+                }
+                resolve(res);
+            }).on('data', () => {
+                file.chunks += 1;
+                table.log();
+            })
+        })
+            // lib.requestPromise({ url })
+        .then(res => {
+            if (DOWNLOAD_DIR && DOWNLOAD_DIR != "/dev/null") {
+                fs.writeFile(
+                    `${DOWNLOAD_DIR}/${fileName}`,
+                    res.body,
+                    error => {
+                        if (error) {
+                            throw error
+                        }
+                    }
+                )
+            }
+        })
+        .then(() => {
+            file.status = "Done";
+            table.log()
+            return downloadFile(table)
         }, err => {
-            process.stdout.write(`FAILED!\n`.red);
+            file.status = "FAILED";
+            table.log()
             console.log(String(err).red);
         });
     }
 
+    process.stdout.write("\r\033[?25h"); // show cursor
     console.log(`\nAll files downloaded`.green);
     return true;
 }

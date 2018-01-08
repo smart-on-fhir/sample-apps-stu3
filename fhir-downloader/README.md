@@ -13,4 +13,4 @@ npm i && node .
 ```
 
 
-By default the script will download all the files to the `./downloads` folder. However, you might often want to change that or just test it without actually downloading anything. To do so you can set the `DOWNLOAD_DIR` environment variable. For example, if you don't want to save the downloaded files you can do `DOWNLOAD_DIR="/dev/null" node .`
+By default the script will download all the files to the `./downloads` folder. However, you might often want to change that or just test it without actually downloading anything. To do so, you can set the `DOWNLOAD_DIR` environment variable. For example, if you don't want to save the downloaded files you can do `DOWNLOAD_DIR="/dev/null" node .`

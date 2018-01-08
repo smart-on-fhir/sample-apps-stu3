@@ -61,7 +61,114 @@ function generateProgress(pct=0, length=40) {
     return "\r\033[2K" + `${pct}% `.bold + `${spinner} `;
 }
 
+/**
+ * Appends @char to the right side of the @str while it's length reaches @len
+ * @param {String} str 
+ * @param {Number} len 
+ * @param {String} char Defaults to " "
+ * @returns {String} The padded string
+ */
+function padRight(str, len, char = " ") {
+    str += ""
+    for (let i = str.length; i < len; i++) {
+        str += char;
+    }
+    return str;
+}
+
+/**
+ * Creates and returns an object that represents a list files for download that
+ * is easy to to log aa a table.
+ * @param {Object[]} files
+ * @returns {Object}
+ */
+function createTable(files) {
+
+    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓\n" +
+                         "┃ File                              ┃ Chunk Size ┃ Status      ┃\n" +
+                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━┫";
+
+    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━┛";
+
+    return {
+ 
+        index : 0,
+
+        _logged: 0,
+
+        files: files.map(f => ({
+            url   : f,
+            name  : f.split("/").pop(),
+            status: "Pending",
+            chunks: 0
+        })),
+
+        next() {
+            return this.files[this.index++];
+        },
+
+        log() {
+
+            // The string to write to stdout
+            let str = "";
+    
+            // If we have logged some lines already, go back to rewrite them
+            if (this._logged) {
+                str += "\033[" + (this._logged + 4) + "A";
+            }
+    
+            // add the header
+            str += TABLE_HEADER + "\n";
+    
+            // Compute reasonable slice of up to 20 files because the terminal can't
+            // properly handle big tables exceeding the screen size.
+            let start = Math.max(this.index - 10, 0),
+                end   = Math.min(start + 20, this.files.length);
+            if (end - start < 20) {
+                start = Math.max(end - 20, 0);
+            }
+            let files = this.files.slice(start, end).filter(Boolean);
+    
+            // Convert those files to table rows
+            str += files.map(f => {
+                let line = (
+                    padRight(`┃ ${f.name}`  , 36) +
+                    padRight(`┃ ${f.chunks}`, 13) +
+                    padRight(`┃ ${f.status}`, 14) + "┃\n"
+                );
+                if (f.status == "Downloading") {
+                    line = line.bgBlue;
+                }
+                return line;
+            }).join("");
+    
+            // Add one extra row to display how many files are remaining
+            str += (
+                "┃ " +
+                padRight(`${
+                    end < this.files.length ?
+                        `${this.files.length - end} more` :
+                        ""
+                    }`  , 34).green +
+                padRight(`┃ `, 13) +
+                padRight(`┃ `, 14) + "┃\n"
+            );
+    
+            // "remember" how much lines to delete next time
+            this._logged = files.length + 1;
+    
+            // add the footer
+            str += TABLE_FOOTER;
+    
+            // write it!
+            console.log(str);
+        }
+    }
+}
+
 module.exports = {
     requestPromise,
-    generateProgress
+    generateProgress,
+    padRight,
+    createTable
 };
