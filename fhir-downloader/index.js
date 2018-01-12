@@ -18,18 +18,22 @@ const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || `${__dirname}/downloads`;
 
 function downloadFhir() {
     
-    if (!ACCESS_TOKEN) {
+    if (!ACCESS_TOKEN && config.private_key) {
         return authorize().then(downloadFhir);
+    }
+
+    let headers = {
+        Accept: "application/fhir+ndjson",
+        Prefer: "respond-async"
+    };
+
+    if (ACCESS_TOKEN) {
+        headers.Authorization = "Bearer " + ACCESS_TOKEN;
     }
 
     return lib.requestPromise({
         url: config.fhir_url + "/Patient/$everything",
-        method: "GET",
-        headers: {
-            Authorization: "Bearer " + ACCESS_TOKEN,
-            Accept       : "application/fhir+ndjson",
-            Prefer       : "respond-async"
-        }
+        headers
     })
     .then(
         res => {
@@ -159,7 +163,7 @@ function authorize() {
                 { algorithm: 'RS256'}
             )
         }
-    }).then(res => {
+    }).then(res => {debugger
         ACCESS_TOKEN = res.body.access_token;
         return res.body;
     }).catch(err => {
