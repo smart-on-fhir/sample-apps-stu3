@@ -163,7 +163,7 @@ function authorize() {
                 { algorithm: 'RS256'}
             )
         }
-    }).then(res => {debugger
+    }).then(res => {
         ACCESS_TOKEN = res.body.access_token;
         return res.body;
     }).catch(err => {
