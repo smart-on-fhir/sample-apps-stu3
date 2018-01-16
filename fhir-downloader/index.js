@@ -108,7 +108,7 @@ function downloadFile(table) {
         .then(res => {
             if (DOWNLOAD_DIR && DOWNLOAD_DIR != "/dev/null") {
                 fs.writeFile(
-                    `${DOWNLOAD_DIR}/${fileName}`,
+                    `${DOWNLOAD_DIR}/${file.name}`,
                     res.body,
                     error => {
                         if (error) {
