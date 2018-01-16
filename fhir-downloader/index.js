@@ -71,8 +71,9 @@ function waitForFiles(url, timeToWait = 0) {
         else if (res.statusCode == 200) {
             process.stdout.write(lib.generateProgress(100));
             console.log(``);
+            // A link can look like <meta.rdf>;rel=meta
             return res.headers.link.split(/\s*,\s*/)
-                .map(f => f.replace(/^\s*<\s*/, "").replace(/\s*>\s*$/, ""));
+                .map(f => f.replace(/^\s*<\s*/, "").replace(/\s*>.*$/, ""));
         }
 
         // Any other status is considered an error
