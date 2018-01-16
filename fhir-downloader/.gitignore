@@ -1,2 +1,1 @@
-downloads
-!downloads/.gitkeep
+downloads/*.ndjson
