@@ -1,19 +1,30 @@
+#!/usr/bin/env node
+
+require("colors");
+
 const request   = require("request");
 const jwt       = require("jsonwebtoken");
 const crypto    = require("crypto");
 const fs        = require("fs");
 const base64url = require("base64-url");
-const config    = require("./config.json");
 const lib       = require("./lib");
-require("colors");
-
+const config    = lib.requireIfExists("./config.json") || {};
+const pkg       = require("./package.json");
+const APP = require('commander');
 
 // The (last known) access token is stored in this global variable. When it
 // expires the code should re-authenticate and update it.
 let ACCESS_TOKEN;
 
-// You can set this env var to "/dev/null"
-const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || `${__dirname}/downloads`;
+APP
+    .version(pkg.version)
+    .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "")
+    .option('-T, --type [list]'    , 'Zero or more resource types to download. If omitted downloads everything')
+    .option('-s, --start [date]'   , 'Only include resources modified after this date')
+    .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group')
+    .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
+    .option('-p, --proxy [url]'    , 'Proxy server if needed')
+    .parse(process.argv);
 
 
 function downloadFhir() {
@@ -31,12 +42,37 @@ function downloadFhir() {
         headers.Authorization = "Bearer " + ACCESS_TOKEN;
     }
 
+    let url = APP.fhirUrl, query = [];
+    if (APP.group) {
+        url += `/group/${APP.group}/$everything`
+    } else {
+        url += `/Patient/$everything`
+    }
+
+    if (APP.type) {
+        query.push(`_type=${APP.type}`);
+    }
+
+    if (APP.start) {
+        query.push(`start=${APP.start}`);
+    }
+
+    if (query.length) {
+        url += "?" + query.join("&");
+    }
+
+    console.log(url)
+
     return lib.requestPromise({
-        url: config.fhir_url + "/Patient/$everything",
-        headers
-    })
-    .then(
+        url,
+        headers,
+        proxy: APP.proxy
+    }) .then(
         res => {
+            if (res.statusCode == 204) {
+                console.log("No resources found to match your criteria");
+                process.exit(0);
+            }
             console.log("Waiting for the server to generate the files...".green);
             return waitForFiles(res.headers["content-location"]);
         }
@@ -56,7 +92,13 @@ function downloadFhir() {
 }
 
 function waitForFiles(url, timeToWait = 0) {
-    return lib.requestPromise({ url }, timeToWait).then(res => {
+    return lib.requestPromise({
+        url,
+        proxy: APP.proxy,
+        headers: {
+            Accept: "application/fhir+ndjson"
+        }
+    }, timeToWait).then(res => {
 
         // Still working?
         if (res.statusCode == 202) {
@@ -89,7 +131,14 @@ function downloadFile(table) {
             file.status = "Downloading";
             table.log();
 
-            request({ strictSSL: false, url: file.url }, function(error, res) {
+            request({
+                strictSSL: false,
+                url: file.url,
+                proxy: APP.proxy,
+                headers: {
+                    Accept: "application/fhir+ndjson"
+                }
+            }, function(error, res) {
                 if (error) {
                     return reject(error);
                 }
@@ -106,9 +155,9 @@ function downloadFile(table) {
         })
             // lib.requestPromise({ url })
         .then(res => {
-            if (DOWNLOAD_DIR && DOWNLOAD_DIR != "/dev/null") {
+            if (APP.dir && APP.dir != "/dev/null") {
                 fs.writeFile(
-                    `${DOWNLOAD_DIR}/${file.name}`,
+                    `${APP.dir}/${file.name}`,
                     res.body,
                     error => {
                         if (error) {
@@ -154,6 +203,7 @@ function authorize() {
         method: "POST",
         url   : config.token_url,
         json  : true,
+        proxy : APP.proxy,
         form  : {
             scope: "system/*.*",
             grant_type: "client_credentials",
@@ -175,17 +225,22 @@ function authorize() {
 
 
 // RUN! ------------------------------------------------------------------------
-downloadFhir().catch(err => {
-    
-    // Check if this is an expired token error
-    if (String(err).search(/expired/i) > -1) {
+if (APP.fhirUrl) {
+    downloadFhir().catch(err => {
         
-        // If so, clear the local token to trigger re-authorization
-        ACCESS_TOKEN = null;
+        // Check if this is an expired token error
+        if (String(err).search(/expired/i) > -1) {
+            
+            // If so, clear the local token to trigger re-authorization
+            ACCESS_TOKEN = null;
 
-        // and then try again
-        return downloadFhir();
-    }
-    
-    console.error(String(err).red);
-});
+            // and then try again
+            return downloadFhir();
+        }
+        
+        console.error(String(err).red);
+    });
+}
+else {
+    APP.help();
+}

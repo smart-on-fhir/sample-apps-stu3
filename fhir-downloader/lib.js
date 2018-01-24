@@ -1,6 +1,7 @@
 require("colors");
 
-const request  = require("request");
+const request = require("request");
+const fs      = require("fs");
 
 /**
  * Just a wrapper around "request" to make it return a promise. There is also a
@@ -84,11 +85,11 @@ function padRight(str, len, char = " ") {
  */
 function createTable(files) {
 
-    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓\n" +
-                         "┃ File                              ┃ Chunk Size ┃ Status      ┃\n" +
-                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━┫";
+    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓\n" +
+                         "┃ File                                    ┃ Chunk Size ┃ Status      ┃\n" +
+                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━┫";
 
-    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━┛";
+    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━┛";
 
     return {
  
@@ -132,7 +133,7 @@ function createTable(files) {
             // Convert those files to table rows
             str += files.map(f => {
                 let line = (
-                    padRight(`┃ ${f.name}`  , 36) +
+                    padRight(`┃ ${f.name}`  , 42) +
                     padRight(`┃ ${f.chunks}`, 13) +
                     padRight(`┃ ${f.status}`, 14) + "┃\n"
                 );
@@ -149,7 +150,7 @@ function createTable(files) {
                     end < this.files.length ?
                         `${this.files.length - end} more` :
                         ""
-                    }`  , 34).green +
+                    }`  , 40).green +
                 padRight(`┃ `, 13) +
                 padRight(`┃ `, 14) + "┃\n"
             );
@@ -166,9 +167,17 @@ function createTable(files) {
     }
 }
 
+function requireIfExists(path) {
+    if (fs.existsSync(path)) {
+        return require(path);
+    }
+    return null;
+}
+
 module.exports = {
     requestPromise,
     generateProgress,
     padRight,
-    createTable
+    createTable,
+    requireIfExists
 };
