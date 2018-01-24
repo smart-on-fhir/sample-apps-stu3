@@ -61,7 +61,7 @@ function downloadFhir() {
         url += "?" + query.join("&");
     }
 
-    console.log(url)
+    // console.log(url)
 
     return lib.requestPromise({
         url,
@@ -70,11 +70,14 @@ function downloadFhir() {
     }) .then(
         res => {
             if (res.statusCode == 204) {
-                console.log("No resources found to match your criteria");
+                console.log("No resources match your criteria");
                 process.exit(0);
             }
             console.log("Waiting for the server to generate the files...".green);
-            return waitForFiles(res.headers["content-location"]);
+            return waitForFiles(
+                res.headers["content-location"],
+                Date.now()
+            );
         }
     )
     .then(files => {
@@ -91,7 +94,7 @@ function downloadFhir() {
     });
 }
 
-function waitForFiles(url, timeToWait = 0) {
+function waitForFiles(url, startTime, timeToWait = 0) {
     return lib.requestPromise({
         url,
         proxy: APP.proxy,
@@ -104,8 +107,16 @@ function waitForFiles(url, timeToWait = 0) {
         if (res.statusCode == 202) {
             let pct = res.headers["x-progress"];
             if (pct) {
-                process.stdout.write(lib.generateProgress(pct));
-                return waitForFiles(url, 1000);
+                pct = parseInt(pct, 10)
+                if (!isNaN(pct) && isFinite(pct) && pct >= 0) {
+                    process.stdout.write(lib.generateProgress(pct));
+                }
+                else {
+                    process.stdout.write(
+                        "\r\033[2KWaited for " + lib.formatDuration(Date.now() - startTime)
+                    );
+                }
+                return waitForFiles(url, startTime, 1000);
             }
         }
 

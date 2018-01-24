@@ -174,10 +174,42 @@ function requireIfExists(path) {
     return null;
 }
 
+function formatDuration(ms) {
+    let out = [];
+    let meta = [
+        { n: 1000 * 60 * 60 * 24 * 7  , label: "week" },
+        { n: 1000 * 60 * 60 * 24  , label: "day" },
+        { n: 1000 * 60 * 60  , label: "hour" },
+        { n: 1000 * 60  , label: "minute" },
+        { n: 1000  , label: "second" }
+    ];
+
+    meta.reduce((prev, cur, i, all) => {
+        let chunk = Math.floor(prev / cur.n); // console.log(chunk)
+        if (chunk) {
+            out.push(`${chunk} ${cur.label}${chunk > 1 ? "s" : ""}`);
+            return prev - chunk * cur.n
+        }
+        return prev
+    }, ms);
+
+    if (!out.length) {
+        out.push(`0 ${meta.pop().label}s`);
+    }
+
+    if (out.length > 1) {
+        let last = out.pop();
+        out[out.length - 1] += " and " + last;
+    }
+
+    return out.join(", ")
+}
+
 module.exports = {
     requestPromise,
     generateProgress,
     padRight,
     createTable,
-    requireIfExists
+    requireIfExists,
+    formatDuration
 };
