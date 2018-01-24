@@ -6,6 +6,8 @@ This is a sample CLI app that demonstrates how to implement the spec from http:/
 <img src="screenshot.png" width="650" />
 
 ## Install
+
+First you have to install NodeJS if you don't already have it from https://nodejs.org/. This app has been developed on Node version 7.9 and also tested on Node 8. In case you have older version you might need to also install a newer one. This is easy to do using the Node Version Manager from https://github.com/creationix/nvm. Then clone the code and install the dependencies:
 ```sh
 git clone https://github.com/smart-on-fhir/sample-apps-stu3.git
 cd sample-apps-stu3/fhir-downloader
