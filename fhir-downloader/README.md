@@ -5,7 +5,7 @@ This is a sample CLI app that demonstrates how to implement the spec from http:/
 ## Screenshot
 <img src="screenshot.png" width="650" />
 
-## Install and run
+## Install
 ```sh
 git clone https://github.com/smart-on-fhir/sample-apps-stu3.git
 cd sample-apps-stu3/fhir-downloader
