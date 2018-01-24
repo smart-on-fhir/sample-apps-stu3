@@ -18,7 +18,7 @@ let ACCESS_TOKEN;
 
 APP
     .version(pkg.version)
-    .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "")
+    .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
     .option('-T, --type [list]'    , 'Zero or more resource types to download. If omitted downloads everything')
     .option('-s, --start [date]'   , 'Only include resources modified after this date')
     .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group')
