@@ -44,7 +44,7 @@ function downloadFhir() {
 
     let url = APP.fhirUrl, query = [];
     if (APP.group) {
-        url += `/group/${APP.group}/$everything`
+        url += `/Group/${APP.group}/$everything`
     } else {
         url += `/Patient/$everything`
     }
