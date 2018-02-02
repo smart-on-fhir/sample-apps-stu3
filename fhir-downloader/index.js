@@ -34,7 +34,7 @@ function downloadFhir() {
     }
 
     let headers = {
-        Accept: "application/fhir+ndjson",
+        Accept: "application/fhir+json",
         Prefer: "respond-async"
     };
 
@@ -44,9 +44,9 @@ function downloadFhir() {
 
     let url = APP.fhirUrl, query = [];
     if (APP.group) {
-        url += `/Group/${APP.group}/$everything`
+        url += `/Group/${APP.group}/$export`
     } else {
-        url += `/Patient/$everything`
+        url += `/Patient/$export`
     }
 
     if (APP.type) {
@@ -54,7 +54,7 @@ function downloadFhir() {
     }
 
     if (APP.start) {
-        query.push(`start=${APP.start}`);
+        query.push(`_since=${APP.start}`);
     }
 
     if (query.length) {
@@ -69,10 +69,6 @@ function downloadFhir() {
         proxy: APP.proxy
     }) .then(
         res => {
-            if (res.statusCode == 204) {
-                console.log("No resources match your criteria");
-                process.exit(0);
-            }
             console.log("Waiting for the server to generate the files...".green);
             return waitForFiles(
                 res.headers["content-location"],
@@ -98,9 +94,7 @@ function waitForFiles(url, startTime, timeToWait = 0) {
     return lib.requestPromise({
         url,
         proxy: APP.proxy,
-        headers: {
-            Accept: "application/fhir+ndjson"
-        }
+        json: true
     }, timeToWait).then(res => {
 
         // Still working?
@@ -124,8 +118,14 @@ function waitForFiles(url, startTime, timeToWait = 0) {
         else if (res.statusCode == 200) {
             process.stdout.write(lib.generateProgress(100));
             console.log(``);
-            // A link can look like <meta.rdf>;rel=meta
-            return res.headers.link.split(/\s*,\s*/)
+
+            // v2: Try obtaining the links from the body
+            if (res.body && Array.isArray(res.body.output)) {
+                return res.body.output.map(f => f.url);
+            }
+
+            // v1: Link header. A link can look like <meta.rdf>;rel=meta
+            return String(res.headers.link || "").split(/\s*,\s*/)
                 .map(f => f.replace(/^\s*<\s*/, "").replace(/\s*>.*$/, ""));
         }
 

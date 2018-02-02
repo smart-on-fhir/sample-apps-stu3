@@ -1,6 +1,6 @@
 # Example FHIR Downloader (Backend Service/Bulk Data) App
 
-This is a sample CLI app that demonstrates how to implement the spec from http://wiki.hl7.org/index.php?title=201801_Bulk_Data.
+This is a sample CLI app that demonstrates how to implement the spec from https://github.com/smart-on-fhir/fhir-bulk-data-docs/blob/master/README.md.
 
 ## Screenshot
 <img src="screenshot.png" width="650" />
