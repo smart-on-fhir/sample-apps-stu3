@@ -1,0 +1,2 @@
+fhirclient==3.1.0
+flask==0.12.2
