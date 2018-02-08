@@ -36,10 +36,12 @@ def _get_medication_by_ref(ref, smart):
     return Medication.read(med_id, smart.server).code
 
 def _med_name(med):
-    if med.text:
+    if med.coding:
+        name = next((coding.display for coding in med.coding if coding.system == 'http://www.nlm.nih.gov/research/umls/rxnorm'), None)
+        if name:
+            return name
+    if med.text and med.text:
         return med.text
-    if med.coding and med.coding[0].display:
-        return med.coding[0].display
     return "Unnamed Medication(TM)"
 
 @app.route('/fhir-app/launch.html')
