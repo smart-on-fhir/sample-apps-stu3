@@ -26,7 +26,7 @@ and `Register New App Manually` using the following data:
     App Type          : Public Client
     App Name          : Whatever
     App Launch URI    : http://127.0.0.1:9090/launch.html
-    App Redirect URIs : http://127.0.0.1:9090
+    App Redirect URIs : http://127.0.0.1:9090/
     Patient Scoped App: true (checked)
     Scopes            : patient/*.read launch/patient
 
