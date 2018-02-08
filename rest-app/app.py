@@ -8,6 +8,7 @@
 from flask import Flask, request, redirect, session, url_for
 from fhirclient import client
 from fhirclient.models.medicationrequest import MedicationRequest
+from fhirclient.models.medication import Medication
 
 settings = {
     'app_id': 'my_web_app'
@@ -26,9 +27,13 @@ def _get_smart():
         return client.FHIRClient(state=state, save_func=_save_state)
     else:
         return client.FHIRClient(settings=settings, save_func=_save_state)
-        
+
 def _get_prescriptions(smart):
     return MedicationRequest.where({'patient': smart.patient_id}).perform(smart.server).entry
+
+def _get_medication_by_ref(ref, smart):
+    med_id = ref.split("/")[1]
+    return Medication.read(med_id, smart.server).code
 
 def _med_name(med):
     if med.text:
@@ -75,7 +80,7 @@ def authorize():
 @app.route('/fhir-app/')
 def index():
     smart = _get_smart()
-    
+
     if smart.ready and smart.patient is not None:
         out = """<!DOCTYPE html>
             <html>
@@ -85,20 +90,29 @@ def index():
 
         name = smart.human_name(smart.patient.name[0] if smart.patient.name and len(smart.patient.name) > 0 else 'Unknown')
         out += "<h1>Medications for <span id='name'>%s</span></h1>\n" % name
-        
         out += "<ul id='med_list'>\n"
-    
+
         prescriptions = _get_prescriptions(smart)
-        for pres in prescriptions:
-            med = pres.resource.medicationCodeableConcept
-            out += '<li>%s</li>\n' % _med_name(med)
-    
+        if prescriptions is not None:
+            for pres in prescriptions:
+                if pres.resource.medicationCodeableConcept is not None:
+                    med = pres.resource.medicationCodeableConcept
+                    out += '<li>%s</li>\n' % _med_name(med)
+                elif pres.resource.medicationReference is not None:
+                    med = _get_medication_by_ref(pres.resource.medicationReference.reference, smart)
+                    out += '<li>%s</li>\n' % _med_name(med)
+                else:
+                    out += '<li>Error: medication not found</li>\n'
+
+        else:
+            out += '<li>This patient does not have any prescriptions data</li>\n'
+
         out += """
             </ul>
            </body>
           </html>"""
-    
+
         return out
-    
+
 if __name__ == '__main__':
     app.run(port=8000)
