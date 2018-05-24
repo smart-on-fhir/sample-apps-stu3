@@ -20,24 +20,9 @@ You should see something like
 
 You can stop the server if needed using <kbd>Ctrl+C</kbd>.
 
-Now go the sandbox at https://sandbox.smarthealthit.org/smartdstu3/#/manage-apps
-and `Register New App Manually` using the following data:
+At this point your Launch URI is http://127.0.0.1:9090/launch.html and your
+Redirect URI is http://127.0.0.1:9090. The easiest way to launch the app is to
+go to https://launch.smarthealthit.org, paste your launch url at the bottom and
+click "Launch". Alternatively, you can just click this link to launch:
 
-    App Type          : Public Client
-    App Name          : Whatever
-    App Launch URI    : http://127.0.0.1:9090/launch.html
-    App Redirect URIs : http://127.0.0.1:9090
-    Scopes            : user/*.*
-
-When you save the app new `Client Id` will be presented to you. Copy that ClientID,
-open the file `launch.html` and replace the old id (`my_web_app`) with the new one.
-Now you can return to the sandbox, click the **Launch** button below your app,
-and see how it works.
-
-You can launch it with a patient and then it will only count the meds of the
-selected patient. Otherwise, it will find all the patients that are taking medications.
-
-IMPORTANT! Be careful if launching without a patient. Depending on the data available,
-the app may do many requests, put the server under heavy load and it may take a long
-time to compute the final results.
-
+http://127.0.0.1:9090/launch.html?launch=eyJhIjoiMSJ9&iss=http%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr3%2Ffhir
