@@ -59,7 +59,7 @@ app.post("/cds-services/:id", (req, res) => {
                 {
                     "label": "Pediatric Growth Charts",
                     "type" : "smart",
-                    "url"  : "https://sb-apps.smarthealthit.org/apps/growth-chart/launch.html"
+                    "url"  : "https://examples.smarthealthit.org/growth-chart-app/launch.html"
                 }
             ]
         }];
