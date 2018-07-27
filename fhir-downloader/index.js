@@ -94,7 +94,10 @@ function waitForFiles(url, startTime, timeToWait = 0) {
     return lib.requestPromise({
         url,
         proxy: APP.proxy,
-        json: true
+        json: true,
+        headers : {
+            Authorization: "Bearer " + ACCESS_TOKEN
+        }
     }, timeToWait).then(res => {
 
         // Still working?
@@ -147,7 +150,8 @@ function downloadFile(table) {
                 url: file.url,
                 proxy: APP.proxy,
                 headers: {
-                    Accept: "application/fhir+ndjson"
+                    Accept: "application/fhir+ndjson",
+                    Authorization: "Bearer " + ACCESS_TOKEN
                 }
             }, function(error, res) {
                 if (error) {
