@@ -46,7 +46,7 @@ function downloadFhir() {
     let url = APP.fhirUrl, query = [];
 
     if (APP.global) {
-        url = `${APP.fhirUrl}/$export`;
+        url += `/$export`;
     }
     else if (APP.group) {
         url += `/Group/${APP.group}/$export`
@@ -175,7 +175,6 @@ function downloadFile(table) {
                 table.log();
             })
         })
-            // lib.requestPromise({ url })
         .then(res => {
             if (APP.dir && APP.dir != "/dev/null") {
                 fs.writeFile(
@@ -196,6 +195,7 @@ function downloadFile(table) {
         }, err => {
             file.status = "FAILED";
             table.log()
+            process.stdout.write("\r\033[?25h"); // show cursor
             console.log(String(err).red);
         });
     }
