@@ -56,11 +56,7 @@ function downloadFhir() {
     }
 
     if (APP.type) {
-        if (APP.type == "all") {
-            url = `${APP.fhirUrl}/$export`;
-        } else {
-            query.push(`_type=${APP.type}`);
-        }
+        query.push(`_type=${APP.type}`);
     }
 
     if (APP.start) {
@@ -71,7 +67,7 @@ function downloadFhir() {
         url += "?" + query.join("&");
     }
 
-    // console.log(url, headers)
+    // console.log(url)
 
     return lib.requestPromise({
         url,
@@ -102,7 +98,6 @@ function downloadFhir() {
 }
 
 function waitForFiles(url, startTime, timeToWait = 0) {
-    
     return lib.requestPromise({
         url,
         proxy: APP.proxy,
