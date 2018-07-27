@@ -1,6 +1,6 @@
 {
   "name": "sample-backend-service-bulk-files-app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Terminal app that can run as a backend service",
   "main": "index.js",
   "scripts": {
