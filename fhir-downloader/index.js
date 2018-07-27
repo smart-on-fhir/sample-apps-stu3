@@ -21,9 +21,10 @@ APP
     .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
     .option('-T, --type [list]'    , 'Zero or more resource types to download. If omitted downloads everything')
     .option('-s, --start [date]'   , 'Only include resources modified after this date')
-    .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group')
+    .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
+    .option('--global'             , 'Global (system-level) export')
     .parse(process.argv);
 
 
@@ -43,9 +44,14 @@ function downloadFhir() {
     }
 
     let url = APP.fhirUrl, query = [];
-    if (APP.group) {
+
+    if (APP.global) {
+        url = `${APP.fhirUrl}/$export`;
+    }
+    else if (APP.group) {
         url += `/Group/${APP.group}/$export`
-    } else {
+    }
+    else {
         url += `/Patient/$export`
     }
 
