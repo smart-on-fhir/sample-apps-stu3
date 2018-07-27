@@ -56,7 +56,11 @@ function downloadFhir() {
     }
 
     if (APP.type) {
-        query.push(`_type=${APP.type}`);
+        if (APP.type == "all") {
+            url = `${APP.fhirUrl}/$export`;
+        } else {
+            query.push(`_type=${APP.type}`);
+        }
     }
 
     if (APP.start) {
@@ -67,13 +71,14 @@ function downloadFhir() {
         url += "?" + query.join("&");
     }
 
-    // console.log(url)
+    // console.log(url, headers)
 
     return lib.requestPromise({
         url,
         headers,
         proxy: APP.proxy
-    }) .then(
+    })
+    .then(
         res => {
             console.log("Waiting for the server to generate the files...".green);
             return waitForFiles(
@@ -91,12 +96,13 @@ function downloadFhir() {
     .then(downloadFile)
     .catch(err => {
         process.stdout.write("\r\033[?25h"); // show cursor
-        console.error(`Download failed: ${err}`.red);
+        console.error(`Download failed: ${err.stack}`.red);
         process.exit(1);
     });
 }
 
 function waitForFiles(url, startTime, timeToWait = 0) {
+    
     return lib.requestPromise({
         url,
         proxy: APP.proxy,

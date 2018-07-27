@@ -18,8 +18,12 @@ function requestPromise(options, delay = 0) {
                     return reject(error);
                 }
                 if (res.statusCode >= 400) {
+                    let body = res.body
+                    if (typeof body == "object") {
+                        body = JSON.stringify(body, null, 4);
+                    }
                     return reject(new Error(
-                        `${res.statusCode}: ${res.statusMessage}\n${res.body}`
+                        `${res.statusCode}: ${res.statusMessage}\n${body}`
                     ));
                 }
                 resolve(res);
