@@ -7,14 +7,19 @@ const jwt       = require("jsonwebtoken");
 const crypto    = require("crypto");
 const fs        = require("fs");
 const base64url = require("base64-url");
+const express   = require("express");
+const Url       = require("url");
 const lib       = require("./lib");
+const jwk       = require("jwk-lite");
+const APP       = require("commander");
+const jwkToPem  = require("jwk-to-pem");
 const config    = lib.requireIfExists("./config.json") || {};
 const pkg       = require("./package.json");
-const APP = require('commander');
 
 // The (last known) access token is stored in this global variable. When it
 // expires the code should re-authenticate and update it.
 let ACCESS_TOKEN;
+let SERVER;
 
 APP
     .version(pkg.version)
@@ -27,10 +32,61 @@ APP
     .option('--global'             , 'Global (system-level) export')
     .parse(process.argv);
 
+if (!config.jwks || typeof config.jwks != "object") {
+    console.error('No "jwks" object found in config'.red);
+    process.exit(1);
+}
+
+if (!Array.isArray(config.jwks.keys)) {
+    console.error('"config.jwks.keys" must be an array of keys'.red);
+    process.exit(1);
+}
+
+if (!config.jwks.keys.length) {
+    console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
+    process.exit(1);
+}
+
+// Start a small server to host our JWKS at http://localhost:7000/jwks.json
+// WARNING! This URL should match a value that the backend service supplied to
+// the EHR at client registration time.
+if (config.jwks_url) {
+
+    // Parse config.jwks_url and make sure that it points to http://localhost:{some port}/{some path}
+    let url = Url.parse(config.jwks_url);
+    if (url.protocol != "http:") {
+        console.error(`Only http is supported for config.jwks_url`.red);
+        process.exit(1);
+    }
+    if (url.hostname != "localhost" && url.hostname != "0.0.0.0" && url.hostname != "127.0.0.1") {
+        console.error(`Only localhost is supported for config.jwks_url`.red);
+        process.exit(1);
+    }
+    if (!url.port) {
+        console.error(`config.jwks_url must specify a port`.red);
+        process.exit(1);
+    }
+    if (+url.port < 1024) {
+        console.error(`config.jwks_url must use a port greater than 1024`.red);
+        process.exit(1);
+    }
+
+    // Listen on the specified port and pathname
+    const app = express();
+    app.get(url.pathname, (req, res) => {
+
+        // Only host the public keys!
+        res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
+    });
+    SERVER = app.listen(+url.port, function() {
+        console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
+    });
+}
+
 
 function downloadFhir() {
     
-    if (!ACCESS_TOKEN && config.private_key) {
+    if (!ACCESS_TOKEN && config.jwks) {
         return authorize().then(downloadFhir);
     }
 
@@ -221,6 +277,34 @@ function authorize() {
         jti: crypto.randomBytes(32).toString("hex")
     };
 
+    // Find the last private/public key pair from the JWKS keys
+    let pair = lib.findKeyPair(config.jwks.keys);
+    if (!pair) {
+        return Promise.reject(
+            new Error("Unable to find key pair in the JWKS configuration")
+        );
+    }
+    
+    // Detect the private key algorithm
+    // TODO: Add better EC detection if needed
+    let alg = pair.privateKey.alg || "ES384";
+
+    // Save the key id for later
+    let kid = pair.privateKey.kid;
+    
+    // Convert the private JWK to PEM private key ti sign with
+    let privateKey = jwkToPem(pair.privateKey, { private: true });
+
+    // Sign the jwt with our private key
+    let signed = jwt.sign(jwtToken, privateKey, {
+        algorithm: alg,
+        keyid: kid,
+        header: {
+            jku: config.jwks_url || undefined
+        }
+    });
+    
+    // Authorize
     return lib.requestPromise({
         method: "POST",
         url   : config.token_url,
@@ -230,11 +314,7 @@ function authorize() {
             scope: "system/*.*",
             grant_type: "client_credentials",
             client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-            client_assertion: jwt.sign(
-                jwtToken,
-                base64url.decode(config.private_key),
-                { algorithm: 'RS256'}
-            )
+            client_assertion: signed
         }
     }).then(res => {
         ACCESS_TOKEN = res.body.access_token;
@@ -248,7 +328,11 @@ function authorize() {
 
 // RUN! ------------------------------------------------------------------------
 if (APP.fhirUrl) {
-    downloadFhir().catch(err => {
+    downloadFhir()
+    .then(() => {
+        if (SERVER) SERVER.close();
+    })
+    .catch(err => {
         
         // Check if this is an expired token error
         if (String(err).search(/expired/i) > -1) {

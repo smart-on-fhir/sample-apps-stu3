@@ -23,7 +23,7 @@ node . -d /dev/null
 
 The most common options are available as CLI arguments. However, if you want to use this with protected servers using the backend services auth, there are some settings that are loaded from a config file called `config.json` in the project root folder. This file is not required but we have included an example configuration in `config.example.json` that you can just rename. The options that can be defined there are:
 - `fhir_url` - can be overridden by the `-f` or `--fhir-url` parameter
-- `private_key` 
+- `jwks` 
 - `client_id` 
 - `token_url`
 - `service_url`

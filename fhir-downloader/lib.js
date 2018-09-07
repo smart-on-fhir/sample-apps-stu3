@@ -209,11 +209,42 @@ function formatDuration(ms) {
     return out.join(", ")
 }
 
+/**
+ * JWKS is just an array of keys. We need to find the last private key that
+ * also has a corresponding public key. The pair is recognized by having the
+ * same "kid" property.
+ * @param {Array} keys JWKS.keys 
+ */
+function findKeyPair(keys) {
+    let out = null;
+
+    keys.forEach(key => {
+        if (!key.kid) return;
+        if (!Array.isArray(key.key_ops)) return;
+        if (key.key_ops.indexOf("sign") == -1) return;
+
+        publicKey = keys.find(k => {
+            return (
+                k.kid === key.kid &&
+                Array.isArray(k.key_ops) &&
+                k.key_ops.indexOf("verify") > -1
+            );
+        })
+
+        if (publicKey) {
+            out = { privateKey: key, publicKey };
+        }
+    });
+
+    return out;
+}
+
 module.exports = {
     requestPromise,
     generateProgress,
     padRight,
     createTable,
     requireIfExists,
-    formatDuration
+    formatDuration,
+    findKeyPair
 };
