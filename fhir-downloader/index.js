@@ -270,7 +270,7 @@ function authorize() {
     console.log(ACCESS_TOKEN === null ? "Re-authorizing..." : "Authorizing...");
 
     let jwtToken = {
-        iss: config.service_url,
+        iss: config.client_id,
         sub: config.client_id,
         aud: config.token_url,
         exp: Date.now()/1000 + 300, // 5 min
