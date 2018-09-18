@@ -1,0 +1,12 @@
+{
+  "name": "multi-mode-app",
+  "autho": "Nikolai Schwertner",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "http-server -p 9090 -c-1"
+  },
+  "dependencies": {
+    "fhirclient": "^0.1.8",
+    "http-server": "^0.10.0"
+  }
+}
