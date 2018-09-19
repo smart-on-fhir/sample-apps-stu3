@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+ <head>
+     <title>Multi Mode Demo App</title>
+    <script src="node_modules/fhirclient/fhir-client.js"></script>
+ </head>
+ <body>
+    <div id="message">Loading. Please wait...</div>
+    <script type="text/javascript">
+        function displayMessage (message) {
+            document.getElementById('message').innerHTML = message;
+        }
+
+        function processSinglePatientContext (client, mode) {
+            let patientID = client.patient && client.patient.id;
+
+            client.patient.read().then((pt) => {
+                let names = pt.name.map((name) => name.given.join(" ") + " " + name.family).join(" / ");
+                client.patient.api.fetchAll(
+                    {type: "MedicationRequest", query: {patient: patientID}}
+                ).then((results) => {
+                    let message = results.length + " medication requests found for " + names;
+                    message += " (" + mode + " mode)"
+                    displayMessage (message);
+                });
+            });
+        }
+
+        function processPopulationContext (client) {
+            client.api.fetchAll({type: "Patient"}).then((results) => {
+                displayMessage (results.length + " patients found (population mode)");
+            });
+        }
+
+        FHIR.oauth2.ready((client) => {
+            function gotScope (scope) {
+                let scopes = client.tokenResponse.scope.split(' ');
+                return scopes.find((a) => a === scope);
+            }
+
+            if (gotScope ('launch/patient')) {
+                processSinglePatientContext (client, "standalone");
+            } else if (gotScope ('launch')) {
+                processSinglePatientContext (client, "embedded");
+            } else if (gotScope ('user/*.*')) {
+                processPopulationContext (client);
+            }
+        });
+    </script>
+ </body>
+</html>
