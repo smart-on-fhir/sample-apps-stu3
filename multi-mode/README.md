@@ -1,6 +1,8 @@
 # Multi Mode Demo App
 
 This is simple app that can be launched in embedded, standalone, and population modes
+through three discrete launch endpoints. It demonstrates how you can perform different 
+actions depending on the scopes you have received.
 
 
 ## Install & Run
