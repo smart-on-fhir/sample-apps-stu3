@@ -1,7 +1,6 @@
 # Multi Mode Demo App
 
-This is simple app that can be launched in embedded, standalone, and pupulation modes
-through three discrete launch endpoints
+This is simple app that can be launched in embedded, standalone, and population modes
 
 
 ## Install & Run
