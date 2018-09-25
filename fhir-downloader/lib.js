@@ -82,6 +82,42 @@ function padRight(str, len, char = " ") {
 }
 
 /**
+ * Prepends @char to the left side of the @str while it's length reaches @len
+ * @param {String} str 
+ * @param {Number} len 
+ * @param {String} char Defaults to " "
+ * @returns {String} The padded string
+ */
+function padLeft(str, len, char = " ") {
+    str += ""
+    for (let i = str.length; i < len; i++) {
+        str = char + str;
+    }
+    return str;
+}
+
+/**
+ * Returns the byte size with units
+ * @param {Number} fileSizeInBytes The size to format
+ * @param {Boolean} useBits If true, will divide by 1000 instead of 1024
+ * @returns {String}
+ */
+function humanFileSize(fileSizeInBytes=0, useBits) {
+    let i = 0;
+    const base = useBits ? 1000 : 1024;
+    const units = [' ', ' k', ' M', ' G', ' T', 'P', 'E', 'Z', 'Y'].map(u => {
+        return useBits ? u + "b" : u + "B";
+    });
+
+    while (fileSizeInBytes > base && i < units.length - 1) {
+        fileSizeInBytes = fileSizeInBytes / base;
+        i++;
+    }
+
+    return Math.max(fileSizeInBytes, 0).toFixed(1) + units[i];
+}
+
+/**
  * Creates and returns an object that represents a list files for download that
  * is easy to to log aa a table.
  * @param {Object[]} files
@@ -89,11 +125,10 @@ function padRight(str, len, char = " ") {
  */
 function createTable(files) {
 
-    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━┓\n" +
-                         "┃ File                                    ┃ Chunk Size ┃ Status      ┃\n" +
-                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━┫";
-
-    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━┛";
+    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓\n" +
+                         "┃ File                                    ┃ Chunks ┃ Status      ┃ Downloaded ┃ Uncompressed ┃\n" +
+                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫";
+    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛";
 
     return {
  
@@ -102,10 +137,12 @@ function createTable(files) {
         _logged: 0,
 
         files: files.map(f => ({
-            url   : f,
-            name  : f.split("/").pop(),
-            status: "Pending",
-            chunks: 0
+            url      : f,
+            name     : f.split("/").pop(),
+            status   : "Pending",
+            chunks   : 0,
+            bytes    : 0,
+            rawBytes : 0
         })),
 
         next() {
@@ -138,8 +175,10 @@ function createTable(files) {
             str += files.map(f => {
                 let line = (
                     padRight(`┃ ${f.name}`  , 42) +
-                    padRight(`┃ ${f.chunks}`, 13) +
-                    padRight(`┃ ${f.status}`, 14) + "┃\n"
+                    padRight(`┃ ${f.chunks}`, 9) +
+                    padRight(`┃ ${f.status}`, 14) +
+                    padRight(`┃ ${f.rawBytes ? padLeft(humanFileSize(f.rawBytes), 9) : "     -"}` , 13) + 
+                    padRight(`┃ ${f.bytes ? padLeft(humanFileSize(f.bytes), 10) : "      -"}` , 15) + "┃\n"
                 );
                 if (f.status == "Downloading") {
                     line = line.bgBlue;
@@ -155,8 +194,10 @@ function createTable(files) {
                         `${this.files.length - end} more` :
                         ""
                     }`  , 40).green +
+                padRight(`┃ `, 9) +
+                padRight(`┃ `, 14) +
                 padRight(`┃ `, 13) +
-                padRight(`┃ `, 14) + "┃\n"
+                padRight(`┃ `, 15) + "┃\n"
             );
     
             // "remember" how much lines to delete next time

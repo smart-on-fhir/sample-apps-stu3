@@ -32,13 +32,15 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 
 ## Options
 
-- `-V, --version` - output the version number
-- `-f, --fhir-url [url]` - FHIR server URL. Defaults to the `fhir_url` option from the config file (if any)
-- `-T, --type [list]` - Zero or more resource types to download. If omitted downloads everything
-- `-s, --start [date]` - Only include resources modified after this date
-- `-g, --group [id]` - Group ID - only include resources that belong to this group
+- `-V, --version`         - output the version number
+- `-f, --fhir-url [url]`  - FHIR server URL. Defaults to the `fhir_url` option from the config file (if any)
+- `-T, --type [list]`     - Zero or more resource types to download. If omitted downloads everything
+- `-s, --start [date]`    - Only include resources modified after this date
+- `-g, --group [id]`      - Group ID - only include resources that belong to this group
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
-- `-p, --proxy [url]` - Proxy server if needed
-- `-h, --help` - output usage information
+- `-p, --proxy [url]`     - Proxy server if needed
+- `--global`              - Global (system-level) export
+- `--gzip`                - Request GZipped files
+- `-h, --help`            - output usage information
 
 

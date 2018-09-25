@@ -30,6 +30,7 @@ APP
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
     .option('--global'             , 'Global (system-level) export')
+    .option('--gzip'               , 'Request GZipped files')
     .parse(process.argv);
 
 if (!config.jwks || typeof config.jwks != "object") {
@@ -89,6 +90,8 @@ function downloadFhir() {
     if (!ACCESS_TOKEN && config.jwks) {
         return authorize().then(downloadFhir);
     }
+
+    let start = Date.now();
 
     let headers = {
         Accept: "application/fhir+json",
@@ -150,6 +153,9 @@ function downloadFhir() {
         process.stdout.write("\r\033[?25h"); // show cursor
         console.error(`Download failed: ${err.stack}`.red);
         process.exit(1);
+    })
+    .then(() => {
+        console.log(`Completed in ${lib.formatDuration(Date.now() - start)}`)
     });
 }
 
@@ -212,6 +218,7 @@ function downloadFile(table) {
                 strictSSL: false,
                 url: file.url,
                 proxy: APP.proxy,
+                gzip: !!APP.gzip,
                 headers: {
                     Accept: "application/fhir+ndjson",
                     Authorization: "Bearer " + ACCESS_TOKEN
@@ -226,10 +233,15 @@ function downloadFile(table) {
                     ));
                 }
                 resolve(res);
-            }).on('data', () => {
+            }).on("data", chunk => {
                 file.chunks += 1;
-                table.log();
-            })
+                file.bytes += chunk.length;
+            }).on("response", response => {
+                response.on("data", data => {
+                    file.rawBytes += data.length;
+                    table.log();
+                });
+            });
         })
         .then(res => {
             if (APP.dir && APP.dir != "/dev/null") {
