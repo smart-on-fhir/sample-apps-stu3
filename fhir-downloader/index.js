@@ -87,7 +87,7 @@ if (config.client_id) {
 
 function downloadFhir() {
     
-    if (!ACCESS_TOKEN && config.jwks) {
+    if (!ACCESS_TOKEN && config.jwks && config.client_id) {
         return authorize().then(downloadFhir);
     }
 
@@ -164,9 +164,9 @@ function waitForFiles(url, startTime, timeToWait = 0) {
         url,
         proxy: APP.proxy,
         json: true,
-        headers : {
+        headers: ACCESS_TOKEN ? {
             Authorization: "Bearer " + ACCESS_TOKEN
-        }
+        } : {}
     }, timeToWait).then(res => {
 
         // Still working?
@@ -221,7 +221,7 @@ function downloadFile(table) {
                 gzip: !!APP.gzip,
                 headers: {
                     Accept: "application/fhir+ndjson",
-                    Authorization: "Bearer " + ACCESS_TOKEN
+                    Authorization: ACCESS_TOKEN ? "Bearer " + ACCESS_TOKEN : undefined
                 }
             }, function(error, res) {
                 if (error) {
