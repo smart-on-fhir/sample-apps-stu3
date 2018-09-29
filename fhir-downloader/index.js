@@ -30,64 +30,64 @@ APP
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
     .option('--global'             , 'Global (system-level) export')
-    .option('--gzip'               , 'Request GZipped files')
+    .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
 
-if (!config.jwks || typeof config.jwks != "object") {
-    console.error('No "jwks" object found in config'.red);
-    process.exit(1);
-}
+if (config.client_id) {
 
-if (!Array.isArray(config.jwks.keys)) {
-    console.error('"config.jwks.keys" must be an array of keys'.red);
-    process.exit(1);
-}
+    if (!config.jwks || typeof config.jwks != "object") {
+        console.error('No "jwks" object found in config'.red);
+        process.exit(1);
+    }
 
-if (!config.jwks.keys.length) {
-    console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
-    process.exit(1);
-}
+    if (!Array.isArray(config.jwks.keys)) {
+        console.error('"config.jwks.keys" must be an array of keys'.red);
+        process.exit(1);
+    }
 
-// Start a small server to host our JWKS at http://localhost:7000/jwks.json
-// WARNING! This URL should match a value that the backend service supplied to
-// the EHR at client registration time.
-if (config.jwks_url) {
+    if (!config.jwks.keys.length) {
+        console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
+        process.exit(1);
+    }
 
-    // Parse config.jwks_url and make sure that it points to http://localhost:{some port}/{some path}
+    // Start a small server to host our JWKS at http://localhost:7000/jwks.json
+    // WARNING! This URL should match a value that the backend service supplied to
+    // the EHR at client registration time.
     let url = Url.parse(config.jwks_url);
-    if (url.protocol != "http:") {
-        console.error(`Only http is supported for config.jwks_url`.red);
-        process.exit(1);
-    }
-    if (url.hostname != "localhost" && url.hostname != "0.0.0.0" && url.hostname != "127.0.0.1") {
-        console.error(`Only localhost is supported for config.jwks_url`.red);
-        process.exit(1);
-    }
-    if (!url.port) {
-        console.error(`config.jwks_url must specify a port`.red);
-        process.exit(1);
-    }
-    if (+url.port < 1024) {
-        console.error(`config.jwks_url must use a port greater than 1024`.red);
-        process.exit(1);
-    }
+    let isLocal = url.hostname === "localhost" && url.hostname === "0.0.0.0" && url.hostname === "127.0.0.1";
 
-    // Listen on the specified port and pathname
-    const app = express();
-    app.get(url.pathname, (req, res) => {
+    if (config.jwks_url && isLocal) {
 
-        // Only host the public keys!
-        res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
-    });
-    SERVER = app.listen(+url.port, function() {
-        console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
-    });
+        // Parse config.jwks_url and make sure that it points to http://localhost:{some port}/{some path}
+        if (url.protocol != "http:") {
+            console.error(`Only http is supported for config.jwks_url`.red);
+            process.exit(1);
+        }
+        if (!url.port) {
+            console.error(`config.jwks_url must specify a port`.red);
+            process.exit(1);
+        }
+        if (+url.port < 1024) {
+            console.error(`config.jwks_url must use a port greater than 1024`.red);
+            process.exit(1);
+        }
+
+        // Listen on the specified port and pathname
+        const app = express();
+        app.get(url.pathname, (req, res) => {
+
+            // Only host the public keys!
+            res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
+        });
+        SERVER = app.listen(+url.port, function() {
+            console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
+        });
+    }
 }
-
 
 function downloadFhir() {
     
-    if (!ACCESS_TOKEN && config.jwks) {
+    if (!ACCESS_TOKEN && config.jwks && config.client_id) {
         return authorize().then(downloadFhir);
     }
 
@@ -164,9 +164,9 @@ function waitForFiles(url, startTime, timeToWait = 0) {
         url,
         proxy: APP.proxy,
         json: true,
-        headers : {
+        headers: ACCESS_TOKEN ? {
             Authorization: "Bearer " + ACCESS_TOKEN
-        }
+        } : {}
     }, timeToWait).then(res => {
 
         // Still working?
@@ -221,7 +221,7 @@ function downloadFile(table) {
                 gzip: !!APP.gzip,
                 headers: {
                     Accept: "application/fhir+ndjson",
-                    Authorization: "Bearer " + ACCESS_TOKEN
+                    Authorization: ACCESS_TOKEN ? "Bearer " + ACCESS_TOKEN : undefined
                 }
             }, function(error, res) {
                 if (error) {

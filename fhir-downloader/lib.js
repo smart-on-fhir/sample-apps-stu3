@@ -18,6 +18,7 @@ function requestPromise(options, delay = 0) {
                     return reject(error);
                 }
                 if (res.statusCode >= 400) {
+                    console.log("Request options", options)
                     let body = res.body
                     if (typeof body == "object") {
                         body = JSON.stringify(body, null, 4);
