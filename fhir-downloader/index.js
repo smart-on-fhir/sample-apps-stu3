@@ -30,7 +30,7 @@ APP
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
     .option('--global'             , 'Global (system-level) export')
-    .option('--gzip'               , 'Request GZipped files')
+    .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
 
 if (config.client_id) {
