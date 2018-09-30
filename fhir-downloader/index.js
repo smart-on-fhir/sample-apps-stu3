@@ -36,7 +36,7 @@ APP
 if (config.client_id) {
 
     if (!config.jwks || typeof config.jwks != "object") {
-        console.error('No "jwks" object found in config'.red);
+        console.error('No "jwks" object found in config. If you have a client_id, you must also have a jwks.'.red);
         process.exit(1);
     }
 
@@ -49,14 +49,16 @@ if (config.client_id) {
         console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
         process.exit(1);
     }
+}
 
-    // Start a small server to host our JWKS at http://localhost:7000/jwks.json
-    // WARNING! This URL should match a value that the backend service supplied to
-    // the EHR at client registration time.
+// Start a small server to host our JWKS at http://localhost:7000/jwks.json
+// WARNING! This URL should match a value that the backend service supplied to
+// the EHR at client registration time.
+if (config.jwks_url) {
     let url = Url.parse(config.jwks_url);
     let isLocal = url.hostname === "localhost" && url.hostname === "0.0.0.0" && url.hostname === "127.0.0.1";
 
-    if (config.jwks_url && isLocal) {
+    if (isLocal) {
 
         // Parse config.jwks_url and make sure that it points to http://localhost:{some port}/{some path}
         if (url.protocol != "http:") {
@@ -82,6 +84,10 @@ if (config.client_id) {
         SERVER = app.listen(+url.port, function() {
             console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
         });
+    }
+
+    else if (config.jwks) {
+        console.log(`You are passing both "jwks" and remote "jwks_url". Your "jwks" will be ignored!`.red)
     }
 }
 
