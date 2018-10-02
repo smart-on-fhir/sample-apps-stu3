@@ -19,6 +19,9 @@ const pkg       = require("./package.json");
 // The (last known) access token is stored in this global variable. When it
 // expires the code should re-authenticate and update it.
 let ACCESS_TOKEN;
+
+// Small server to host the public keys in case you provide local jwks_url and
+// jwks set
 let SERVER;
 
 APP
@@ -33,61 +36,84 @@ APP
     .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
 
-if (config.client_id) {
 
-    if (!config.jwks || typeof config.jwks != "object") {
-        console.error('No "jwks" object found in config. If you have a client_id, you must also have a jwks.'.red);
+function applyConfig(config) {
+
+    if (config.client_id && !config.token_url) {
+        console.error(`Your config has a "client_id" but does not have a "token_url"`.red);
         process.exit(1);
     }
 
-    if (!Array.isArray(config.jwks.keys)) {
-        console.error('"config.jwks.keys" must be an array of keys'.red);
+    if (!config.client_id && config.token_url) {
+        console.error(`Your config has a "token_url" but does not have a "client_id"`.red);
         process.exit(1);
     }
 
-    if (!config.jwks.keys.length) {
-        console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
-        process.exit(1);
-    }
-}
+    let isLocalJwksUrl  = false;
+    let isRemoteJwksUrl = false;
 
-// Start a small server to host our JWKS at http://localhost:7000/jwks.json
-// WARNING! This URL should match a value that the backend service supplied to
-// the EHR at client registration time.
-if (config.jwks_url) {
-    let url = Url.parse(config.jwks_url);
-    let isLocal = url.hostname === "localhost" && url.hostname === "0.0.0.0" && url.hostname === "127.0.0.1";
-
-    if (isLocal) {
-
+    if (config.jwks_url) {
+        
         // Parse config.jwks_url and make sure that it points to http://localhost:{some port}/{some path}
-        if (url.protocol != "http:") {
-            console.error(`Only http is supported for config.jwks_url`.red);
-            process.exit(1);
-        }
-        if (!url.port) {
-            console.error(`config.jwks_url must specify a port`.red);
-            process.exit(1);
-        }
-        if (+url.port < 1024) {
-            console.error(`config.jwks_url must use a port greater than 1024`.red);
-            process.exit(1);
+        let jwksUrl = Url.parse(config.jwks_url);
+        isLocalJwksUrl = jwksUrl.hostname === "localhost" ||
+                         jwksUrl.hostname === "0.0.0.0" ||
+                         jwksUrl.hostname === "127.0.0.1";
+        isRemoteJwksUrl = !isLocalJwksUrl;
+
+        if (isRemoteJwksUrl && config.jwks) {
+            console.log(`WARNING: You are passing both "jwks" and remote "jwks_url". Your "jwks" will be ignored!`.red)
         }
 
-        // Listen on the specified port and pathname
-        const app = express();
-        app.get(url.pathname, (req, res) => {
+        if (isLocalJwksUrl) {
 
-            // Only host the public keys!
-            res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
-        });
-        SERVER = app.listen(+url.port, function() {
-            console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
-        });
+            // Start a small server to host our JWKS at http://localhost:7000/jwks.json
+            // WARNING! This URL should match a value that the backend service supplied to
+            // the EHR at client registration time.
+            if (url.protocol != "http:") {
+                console.error(`Only http is supported for config.jwks_url if it is on localhost`.red);
+                process.exit(1);
+            }
+
+            if (!url.port) {
+                console.error(`A local config.jwks_url must specify a port`.red);
+                process.exit(1);
+            }
+
+            if (+url.port < 1024) {
+                console.error(`A local config.jwks_url must use a port greater than 1024`.red);
+                process.exit(1);
+            }
+
+            // Listen on the specified port and pathname and host the public keys
+            const app = express();
+            app.get(url.pathname, (req, res) => {
+                res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
+            });
+            SERVER = app.listen(+url.port, function() {
+                console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
+            });
+        }
     }
 
-    else if (config.jwks) {
-        console.log(`You are passing both "jwks" and remote "jwks_url". Your "jwks" will be ignored!`.red)
+    if (config.client_id) {
+
+        if (!isRemoteJwksUrl) {
+            if (!config.jwks || typeof config.jwks != "object") {
+                console.error('No "jwks" object found in config. If you have a client_id, you must also have a jwks, unless you provide a remote jwks_url.'.red);
+                process.exit(1);
+            }
+
+            if (!Array.isArray(config.jwks.keys)) {
+                console.error('"config.jwks.keys" must be an array of keys'.red);
+                process.exit(1);
+            }
+
+            if (!config.jwks.keys.length) {
+                console.error('"config.jwks.keys" must be an array of keys and cannot be empty'.red);
+                process.exit(1);
+            }
+        }
     }
 }
 
@@ -318,7 +344,8 @@ function authorize() {
         algorithm: alg,
         keyid: kid,
         header: {
-            jku: config.jwks_url || undefined
+            jku: config.jwks_url || undefined,
+            kty: pair.privateKey.kty
         }
     });
     
@@ -346,11 +373,11 @@ function authorize() {
 
 // RUN! ------------------------------------------------------------------------
 if (APP.fhirUrl) {
-    downloadFhir()
-    .then(() => {
+    applyConfig(config);
+    
+    downloadFhir().then(() => {
         if (SERVER) SERVER.close();
-    })
-    .catch(err => {
+    }).catch(err => {
         
         // Check if this is an expired token error
         if (String(err).search(/expired/i) > -1) {
