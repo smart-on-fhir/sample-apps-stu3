@@ -26,7 +26,7 @@ The most common options are available as CLI arguments. However, if you want to 
 - `jwks`        - Optional. An array of JWK keys (must contain a public/private key pair).
 - `client_id`   - Optional. The client ID obtained at registration. If omitted, no authentication will be performed and all the settings except `fhir_url` will be ignored.
 - `token_url`   - Optional. Required if `client_id` is set. The authentication endpoint.
-- `jwks_url`    - Optional. If this is a local URL (at localhost. 127.0.0.1 or 0.0.0.0), a server will be started there to host the public keys
+- `jwks_url`    - Optional. If this is a local URL (at `localhost`, `127.0.0.1` or `0.0.0.0`), a server will be started there to host the public keys
                   from the `jwks`. In this case `jwks` is required. If this is remote URL, no server will be started and `jwks` is not required.
 
 Tools like https://bulk-data.smarthealthit.org/ can generate such a config file and you can just download and use it (note the "Download as JSON" button). For more details check out the backend services spec at http://docs.smarthealthit.org/authorization/backend-services/.
@@ -47,7 +47,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 
 ## Validating References
 There is a helper script in the root folder called `test-references.js`. It will walk all the `.ndjson`
-files in the `downloads` and insert all resources into an SQLite database. Then it will walk all the resources
+files in the `downloads` folder and insert all resources into an SQLite database. Then it will walk all the resources
 in that database and check if any references can be resolved to another resource in the same DB.
 You can use it like so:
 
