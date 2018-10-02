@@ -37,7 +37,7 @@ APP
     .parse(process.argv);
 
 
-function applyConfig(config) {
+function init(config) {
 
     if (config.client_id && !config.token_url) {
         console.error(`Your config has a "client_id" but does not have a "token_url"`.red);
@@ -115,6 +115,14 @@ function applyConfig(config) {
             }
         }
     }
+
+    // Make sure we show cursor after Ctrl+C is pressed while the cursor is hidden!
+    process.on('SIGINT', (code) => {
+        if (code != 1234) {
+            process.stdout.write("\r\033[?25h\n");
+            process.exit(code ? 1234 : 0)
+        }
+    });
 }
 
 function downloadFhir() {
@@ -373,7 +381,7 @@ function authorize() {
 
 // RUN! ------------------------------------------------------------------------
 if (APP.fhirUrl) {
-    applyConfig(config);
+    init(config);
     
     downloadFhir().then(() => {
         if (SERVER) SERVER.close();
