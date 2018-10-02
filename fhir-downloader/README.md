@@ -43,4 +43,20 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `--gzip`                - Request GZipped files
 - `-h, --help`            - output usage information
 
+## Validating References
+There is a helper script in the root folder called `test-references.js`. It will walk all the `.ndjson`
+files in the `downloads` and insert all resources into an SQLite database. Then it will walk all the resources
+in that database and check if any references can be resolved to another resource in the same DB.
+You can use it like so:
 
+Example Config:
+```json
+{
+    "jwks_url": "https://cdn.rawgit.com/smart-on-fhir/fhir-bulk-data-docs/master/sample-jwks/RS384.public.json",
+    "fhir_url": "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MX0/fhir"
+}
+```
+Then run:
+```sh
+rm -f downloads/*.ndjson && node . --global && node test-references.js
+```
