@@ -22,11 +22,13 @@ node . -d /dev/null
 ## Configuration
 
 The most common options are available as CLI arguments. However, if you want to use this with protected servers using the backend services auth, there are some settings that are loaded from a config file called `config.json` in the project root folder. This file is not required but we have included an example configuration in `config.example.json` that you can just rename. The options that can be defined there are:
-- `fhir_url` - can be overridden by the `-f` or `--fhir-url` parameter
-- `jwks` 
-- `client_id` 
-- `token_url`
-- `service_url`
+- `fhir_url`    - Required. Can be overridden by the `-f` or `--fhir-url` parameter
+- `jwks`        - Optional. An array of JWK keys (must contain a public/private key pair).
+- `client_id`   - Optional. The client ID obtained at registration. If omitted, no authentication will be performed and all the settings except `fhir_url` will be ignored.
+- `token_url`   - Optional. Required if `client_id` is set. The authentication endpoint.
+- `jwks_url`    - Optional. If this is a local URL (at localhost. 127.0.0.1 or 0.0.0.0), a server will be started there to host the public keys
+                  from the `jwks`. In this case `jwks` is required. If this is remote URL, no server will be started and `jwks` is not required.
+
 Tools like https://bulk-data.smarthealthit.org/ can generate such a config file and you can just download and use it (note the "Download as JSON" button). For more details check out the backend services spec at http://docs.smarthealthit.org/authorization/backend-services/.
 
 
@@ -40,7 +42,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
 - `-p, --proxy [url]`     - Proxy server if needed
 - `--global`              - Global (system-level) export
-- `--gzip`                - Request GZipped files
+- `--no-gzip`             - Do not request GZipped files
 - `-h, --help`            - output usage information
 
 ## Validating References
