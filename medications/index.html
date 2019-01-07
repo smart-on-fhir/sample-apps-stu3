@@ -40,25 +40,35 @@
         FHIR.oauth2.ready(function(smart){
             smart.patient.read().then(function(pt) {
                 displayPatient (pt);
-            });
-            smart.patient.api.fetchAllWithReferences(
-                { type: "MedicationRequest" },
-                [ "MedicationRequest.medicationReference" ]
-            ).then(function(results, refs) {
-                if (results.length) {
-                    med_list.innerHTML = "";
-                    results.forEach(function(prescription){
-                        if (prescription.medicationCodeableConcept) {
-                            displayMedication(prescription.medicationCodeableConcept.coding);
-                        } else if (prescription.medicationReference) {
-                            var med = refs(prescription, prescription.medicationReference);
-                            displayMedication(med && med.code.coding || []);
+
+                // smart.api.patient.fetcAllWithReferences(...) does not work
+                // with fhir-client.js. MedicationRequest is not listed in 
+                // https://github.com/FHIR/fhir.js/blob/master/src/middlewares/patient.js#L5
+                // and we have to explicitly search with patient id
+                smart.api.fetchAllWithReferences(
+                    { 
+                        type: "MedicationRequest",
+                        query: {
+                            patient: pt.id
                         }
-                    });
-                }
-                else {
-                    med_list.innerHTML = "No medications found for the selected patient";
-                }
+                    },
+                    [ "MedicationRequest.medicationReference" ]
+                ).then(function(results, refs) {
+                    if (results.length) {
+                        med_list.innerHTML = "";
+                        results.forEach(function(prescription){
+                            if (prescription.medicationCodeableConcept) {
+                                displayMedication(prescription.medicationCodeableConcept.coding);
+                            } else if (prescription.medicationReference) {
+                                var med = refs(prescription, prescription.medicationReference);
+                                displayMedication(med && med.code.coding || []);
+                            }
+                        });
+                    }
+                    else {
+                        med_list.innerHTML = "No medications found for the selected patient";
+                    }
+                });
             });
         });
 
