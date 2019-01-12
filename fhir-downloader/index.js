@@ -222,8 +222,8 @@ function waitForFiles(url, startTime, timeToWait = 0) {
                         "\r\033[2KWaited for " + lib.formatDuration(Date.now() - startTime)
                     );
                 }
-                return waitForFiles(url, startTime, 1000);
             }
+            return waitForFiles(url, startTime, 1000);
         }
 
         // Files generated
