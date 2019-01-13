@@ -118,6 +118,18 @@ function humanFileSize(fileSizeInBytes=0, useBits) {
     return Math.max(fileSizeInBytes, 0).toFixed(1) + units[i];
 }
 
+function Screen() {
+    let _lastLinesLength = 0;
+
+    this.render = (lines) => {
+        if (_lastLinesLength) {
+            process.stdout.write("\033[" + _lastLinesLength + "A");
+        }
+        _lastLinesLength = lines.length;
+        process.stdout.write("\033[0K\n" + lines.join("\n\033[0K"));        
+    };
+}
+
 /**
  * Creates and returns an object that represents a list files for download that
  * is easy to to log aa a table.
@@ -126,11 +138,17 @@ function humanFileSize(fileSizeInBytes=0, useBits) {
  */
 function createTable(files) {
 
-    const TABLE_HEADER = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓\n" +
-                         "┃ File                                    ┃ Chunks ┃ Status      ┃ Downloaded ┃ Uncompressed ┃\n" +
-                         "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫";
-    const TABLE_FOOTER = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛";
+    const TABLE_HEADER = [
+        "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓",
+        "┃ File                                    ┃ Chunks ┃ Status      ┃ Downloaded ┃ Uncompressed ┃",
+        "┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━━━━━━━┫"
+    ];
 
+    const TABLE_FOOTER = [
+        "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━━━━━━━┛"
+    ];
+
+    const screen = new Screen();
     return {
  
         index : 0,
@@ -146,23 +164,18 @@ function createTable(files) {
             rawBytes : 0
         })),
 
+        isComplete() {
+            return this.files.every(f => f.status == "Done");
+        },
+
         next() {
             return this.files[this.index++];
         },
 
         log() {
 
-            // The string to write to stdout
-            let str = "";
-    
-            // If we have logged some lines already, go back to rewrite them
-            if (this._logged) {
-                str += "\033[" + (this._logged + 4) + "A";
-            }
-    
-            // add the header
-            str += TABLE_HEADER + "\n";
-    
+            let lines = [].concat(TABLE_HEADER);
+
             // Compute reasonable slice of up to 20 files because the terminal can't
             // properly handle big tables exceeding the screen size.
             let start = Math.max(this.index - 10, 0),
@@ -171,24 +184,24 @@ function createTable(files) {
                 start = Math.max(end - 20, 0);
             }
             let files = this.files.slice(start, end).filter(Boolean);
-    
+
             // Convert those files to table rows
-            str += files.map(f => {
+            files.forEach(f => {
                 let line = (
                     padRight(`┃ ${f.name}`  , 42) +
                     padRight(`┃ ${f.chunks}`, 9) +
                     padRight(`┃ ${f.status}`, 14) +
                     padRight(`┃ ${f.rawBytes ? padLeft(humanFileSize(f.rawBytes), 9) : "     -"}` , 13) + 
-                    padRight(`┃ ${f.bytes ? padLeft(humanFileSize(f.bytes), 10) : "      -"}` , 15) + "┃\n"
+                    padRight(`┃ ${f.bytes ? padLeft(humanFileSize(f.bytes), 10) : "      -"}` , 15) + "┃"
                 );
                 if (f.status == "Downloading") {
                     line = line.bgBlue;
                 }
-                return line;
-            }).join("");
-    
+                lines.push(line);
+            });
+
             // Add one extra row to display how many files are remaining
-            str += (
+            lines.push(
                 "┃ " +
                 padRight(`${
                     end < this.files.length ?
@@ -198,17 +211,14 @@ function createTable(files) {
                 padRight(`┃ `, 9) +
                 padRight(`┃ `, 14) +
                 padRight(`┃ `, 13) +
-                padRight(`┃ `, 15) + "┃\n"
+                padRight(`┃ `, 15) + "┃"
             );
     
-            // "remember" how much lines to delete next time
-            this._logged = files.length + 1;
-    
             // add the footer
-            str += TABLE_FOOTER;
+            lines.push(TABLE_FOOTER);
     
             // write it!
-            console.log(str);
+            screen.render(lines);
         }
     }
 }

@@ -32,6 +32,7 @@ APP
     .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
+    .option("-c, --concurrency [n]", "Number of parallel connections", 10)
     .option('--global'             , 'Global (system-level) export')
     .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
@@ -117,12 +118,12 @@ function init(config) {
     }
 
     // Make sure we show cursor after Ctrl+C is pressed while the cursor is hidden!
-    process.on('SIGINT', (code) => {
-        if (code != 1234) {
-            process.stdout.write("\r\033[?25h\n");
-            process.exit(code ? 1234 : 0)
-        }
-    });
+    // process.on('SIGINT', (code) => {
+    //     if (code != 1234) {
+    //         process.stdout.write("\r\033[?25h\n");
+    //         process.exit(code ? 1234 : 0)
+    //     }
+    // });
 }
 
 function downloadFhir() {
@@ -185,12 +186,12 @@ function downloadFhir() {
     .then(files => {
         let table = lib.createTable(files);
         table.log();
-        process.stdout.write("\r\033[?25l"); // hide cursor
+        // process.stdout.write("\r\033[?25l"); // hide cursor
         return table;
     })
-    .then(downloadFile)
+    .then(downloadFiles)
     .catch(err => {
-        process.stdout.write("\r\033[?25h"); // show cursor
+        // process.stdout.write("\r\033[?25h"); // show cursor
         console.error(`Download failed: ${err.stack}`.red);
         process.exit(1);
     })
@@ -245,6 +246,12 @@ function waitForFiles(url, startTime, timeToWait = 0) {
         // This includes the "204 No Content" case!
         return Promise.reject(res.statusCode + ": " + res.statusMessage);
     });
+}
+
+function downloadFiles(table) {
+    for (let i = 0; i < APP.concurrency; i++) {
+        downloadFile(table);
+    }
 }
 
 function downloadFile(table) {
@@ -303,13 +310,15 @@ function downloadFile(table) {
         }, err => {
             file.status = "FAILED";
             table.log()
-            process.stdout.write("\r\033[?25h"); // show cursor
+            // process.stdout.write("\r\033[?25h"); // show cursor
             console.log(String(err).red);
         });
     }
 
-    process.stdout.write("\r\033[?25h"); // show cursor
-    console.log(`\nAll files downloaded`.green);
+    if (table.isComplete()) {
+        // process.stdout.write("\r\033[?25h"); // show cursor
+        console.log(`\nAll files downloaded`.green);
+    }
     return true;
 }
 
