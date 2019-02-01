@@ -345,15 +345,15 @@ function authorize() {
             new Error("Unable to find key pair in the JWKS configuration")
         );
     }
-    
+
     // Detect the private key algorithm
     // TODO: Add better EC detection if needed
     let alg = pair.privateKey.alg || "ES384";
 
     // Save the key id for later
     let kid = pair.privateKey.kid;
-    
-    // Convert the private JWK to PEM private key ti sign with
+
+    // Convert the private JWK to PEM private key to sign with
     let privateKey = jwkToPem(pair.privateKey, { private: true });
 
     // Sign the jwt with our private key
@@ -365,7 +365,7 @@ function authorize() {
             kty: pair.privateKey.kty
         }
     });
-    
+
     // Authorize
     return lib.requestPromise({
         method: "POST",
