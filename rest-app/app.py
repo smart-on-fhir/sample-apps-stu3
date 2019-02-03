@@ -11,7 +11,8 @@ from fhirclient.models.medicationrequest import MedicationRequest
 from fhirclient.models.medication import Medication
 
 settings = {
-    'app_id': 'my_web_app'
+    'app_id': 'my_web_app',
+    'api_base': 'https://launch.smarthealthit.org/v/r2/fhir'
 }
 
 application = app = Flask('wsgi')
