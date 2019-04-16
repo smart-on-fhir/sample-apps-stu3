@@ -54,9 +54,10 @@
                     },
                     [ "MedicationRequest.medicationReference" ]
                 ).then(function(results, refs) {
-                    if (results.length) {
+                    if (results.data.entry.length) {
                         med_list.innerHTML = "";
-                        results.forEach(function(prescription){
+                        results.data.entry.forEach(function(prescriptionEntry){
+                            var prescription = prescriptionEntry.resource;
                             if (prescription.medicationCodeableConcept) {
                                 displayMedication(prescription.medicationCodeableConcept.coding);
                             } else if (prescription.medicationReference) {
