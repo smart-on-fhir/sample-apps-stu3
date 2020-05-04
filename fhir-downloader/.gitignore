@@ -1,2 +1,3 @@
 downloads/*.ndjson
+downloads/attachments/*.*
 config.json

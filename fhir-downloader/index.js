@@ -2,19 +2,20 @@
 
 require("colors");
 
-const request   = require("request");
-const jwt       = require("jsonwebtoken");
-const crypto    = require("crypto");
-const fs        = require("fs");
-const base64url = require("base64-url");
-const express   = require("express");
-const Url       = require("url");
-const lib       = require("./lib");
-const jwk       = require("jwk-lite");
-const APP       = require("commander");
-const jwkToPem  = require("jwk-to-pem");
-const config    = lib.requireIfExists("./config.json") || {};
-const pkg       = require("./package.json");
+const request      = require("request");
+const jwt          = require("jsonwebtoken");
+const crypto       = require("crypto");
+const fs           = require("fs");
+const express      = require("express");
+const Url          = require("url");
+const APP          = require("commander");
+const jwkToPem     = require("jwk-to-pem");
+const stream       = require("stream");
+const lib          = require("./lib");
+const config       = lib.requireIfExists("./config.json") || {};
+const pkg          = require("./package.json");
+const NdJsonStream = require("./streams/NdJsonStream");
+const DocumentReferenceHandler = require("./streams/DocumentReferenceHandler");
 
 // The (last known) access token is stored in this global variable. When it
 // expires the code should re-authenticate and update it.
@@ -23,6 +24,11 @@ let ACCESS_TOKEN;
 // Small server to host the public keys in case you provide local jwks_url and
 // jwks set
 let SERVER;
+
+// Collect error here. They cannot be logged properly while the task is running
+// but after all download attempts are finished, we check this array and log it
+// if it is not empty
+let ERROR_LOG = [];
 
 APP
     .version(pkg.version)
@@ -71,28 +77,28 @@ function init(config) {
             // Start a small server to host our JWKS at http://localhost:7000/jwks.json
             // WARNING! This URL should match a value that the backend service supplied to
             // the EHR at client registration time.
-            if (url.protocol != "http:") {
+            if (jwksUrl.protocol != "http:") {
                 console.error(`Only http is supported for config.jwks_url if it is on localhost`.red);
                 process.exit(1);
             }
 
-            if (!url.port) {
+            if (!jwksUrl.port) {
                 console.error(`A local config.jwks_url must specify a port`.red);
                 process.exit(1);
             }
 
-            if (+url.port < 1024) {
+            if (+jwksUrl.port < 1024) {
                 console.error(`A local config.jwks_url must use a port greater than 1024`.red);
                 process.exit(1);
             }
 
             // Listen on the specified port and pathname and host the public keys
             const app = express();
-            app.get(url.pathname, (req, res) => {
+            app.get(jwksUrl.pathname, (req, res) => {
                 res.json({ keys: config.jwks.keys.filter(k => k.key_ops.indexOf("sign") == -1) });
             });
-            SERVER = app.listen(+url.port, function() {
-                console.log(`The JWKS is available at http://localhost:${url.port}${url.pathname}`);
+            SERVER = app.listen(+jwksUrl.port, function() {
+                console.log(`The JWKS is available at http://localhost:${jwksUrl.port}${jwksUrl.pathname}`);
             });
         }
     }
@@ -250,75 +256,86 @@ function waitForFiles(url, startTime, timeToWait = 0) {
 
 function downloadFiles(table) {
     for (let i = 0; i < APP.concurrency; i++) {
-        downloadFile(table);
+        downloadAttachment(table);
     }
 }
 
-function downloadFile(table) {
+function downloadAttachment(table) {
     let file = table.next();
     if (file) {
-        return new Promise((resolve, reject) => {
-            file.status = "Downloading";
-            table.log();
+        file.status = "Downloading";
+        table.log();
 
-            request({
-                strictSSL: false,
-                url: file.url,
-                proxy: APP.proxy,
-                gzip: !!APP.gzip,
-                headers: {
-                    Accept: "application/fhir+ndjson",
-                    Authorization: ACCESS_TOKEN ? "Bearer " + ACCESS_TOKEN : undefined
-                }
-            }, function(error, res) {
-                if (error) {
-                    return reject(error);
-                }
-                if (res.statusCode >= 400) {
-                    return reject(new Error(
-                        `${res.statusCode}: ${res.statusMessage}\n${res.body}`
-                    ));
-                }
-                resolve(res);
-            }).on("data", chunk => {
-                file.chunks += 1;
-                file.bytes += chunk.length;
-            }).on("response", response => {
-                response.on("data", data => {
-                    file.rawBytes += data.length;
-                    table.log();
-                });
+        // Create a download stream
+        const download = request.get({
+            strictSSL: false,
+            url: file.url,
+            proxy: APP.proxy,
+            gzip: !!APP.gzip,
+            headers: {
+                Accept: "application/fhir+ndjson",
+                Authorization: ACCESS_TOKEN ? "Bearer " + ACCESS_TOKEN : undefined
+            }
+        });
+
+        // Count the chunks and the uncompressed bytes
+        // @ts-ignore
+        download.on("data", chunk => {
+            file.chunks += 1;
+            file.bytes += chunk.length;
+        });
+
+        // Count the compressed bytes (if gzip is on)
+        // @ts-ignore
+        download.on("response", response => {
+            if (response.statusCode >= 400) {
+                throw new Error(
+                    `${response.statusCode}: ${response.statusMessage}\n${response.body}`
+                );
+            }
+            response.on("data", data => {
+                file.rawBytes += data.length;
+                table.log();
             });
-        })
-        .then(res => {
-            if (APP.dir && APP.dir != "/dev/null") {
-                fs.writeFile(
-                    `${APP.dir}/${file.name}`,
-                    res.body,
-                    error => {
-                        if (error) {
-                            throw error
-                        }
-                    }
-                )
+        });
+
+        // Convert to stream of JSON objects
+        let pipeline = download.pipe(new NdJsonStream());
+
+        // Handle DocumentReference with absolute URLs
+        pipeline = pipeline.pipe(new DocumentReferenceHandler({
+            dir  : APP.dir,
+            proxy: APP.proxy,
+            gzip : !!APP.gzip,
+            accessToken: ACCESS_TOKEN
+        }));
+
+        // Write files to FS if needed
+        if (APP.dir && APP.dir != "/dev/null") {
+            pipeline = pipeline.pipe(fs.createWriteStream(`${APP.dir}/${file.name}`));
+        }
+
+        stream.finished(pipeline, error => {
+            if (error) {
+                file.status = "FAILED";
+                table.log();
+                ERROR_LOG.push(error);
+            } else {
+                file.status = "Done";
+                table.log()
+                return downloadAttachment(table);
             }
         })
-        .then(() => {
-            file.status = "Done";
-            table.log()
-            return downloadFile(table)
-        }, err => {
-            file.status = "FAILED";
-            table.log()
-            // process.stdout.write("\r\033[?25h"); // show cursor
-            console.log(String(err).red);
-        });
+
+        if (!APP.dir || APP.dir == "/dev/null") {
+            pipeline.resume();
+        }
     }
 
     if (table.isComplete()) {
-        // process.stdout.write("\r\033[?25h"); // show cursor
         console.log(`\nAll files downloaded`.green);
     }
+
     return true;
 }
 
@@ -394,6 +411,15 @@ if (APP.fhirUrl) {
     
     downloadFhir().then(() => {
         if (SERVER) SERVER.close();
+
+        if (ERROR_LOG.length) {
+            console.log("============================");
+            console.log("ERRORS");
+            console.log("============================");
+            ERROR_LOG.forEach(e => console.error);
+            ERROR_LOG = [];
+        }
+
     }).catch(err => {
         
         // Check if this is an expired token error

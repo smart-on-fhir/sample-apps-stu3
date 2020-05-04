@@ -35,11 +35,11 @@ function requestPromise(options, delay = 0) {
 
 /**
  * Generates a progress indicator
- * @param {Number} pct The percentage
+ * @param {number|string} pct The percentage
  * @returns {String}
  */
 function generateProgress(pct=0, length=40) {
-    pct = parseFloat(pct);
+    pct = parseFloat(pct + "");
     if (isNaN(pct) || !isFinite(pct)) {
         pct = 0;
     }
@@ -103,7 +103,7 @@ function padLeft(str, len, char = " ") {
  * @param {Boolean} useBits If true, will divide by 1000 instead of 1024
  * @returns {String}
  */
-function humanFileSize(fileSizeInBytes=0, useBits) {
+function humanFileSize(fileSizeInBytes = 0, useBits = false) {
     let i = 0;
     const base = useBits ? 1000 : 1024;
     const units = [' ', ' k', ' M', ' G', ' T', 'P', 'E', 'Z', 'Y'].map(u => {
@@ -275,13 +275,11 @@ function findKeyPair(keys) {
         if (!Array.isArray(key.key_ops)) return;
         if (key.key_ops.indexOf("sign") == -1) return;
 
-        publicKey = keys.find(k => {
-            return (
-                k.kid === key.kid &&
-                Array.isArray(k.key_ops) &&
-                k.key_ops.indexOf("verify") > -1
-            );
-        })
+        const publicKey = keys.find(k => (
+            k.kid === key.kid &&
+            Array.isArray(k.key_ops) &&
+            k.key_ops.indexOf("verify") > -1
+        ));
 
         if (publicKey) {
             out = { privateKey: key, publicKey };
@@ -291,6 +289,20 @@ function findKeyPair(keys) {
     return out;
 }
 
+/**
+ * Walks thru an object (ar array) and returns the value found at the
+ * provided path. This function is very simple so it intentionally does not
+ * support any argument polymorphism, meaning that the path can only be a
+ * dot-separated string. If the path is invalid returns undefined.
+ * @param {Object} obj The object (or Array) to walk through
+ * @param {String} path The path (eg. "a.b.4.c")
+ * @returns {*} Whatever is found in the path or undefined
+ */
+function getPath(obj, path = "")
+{
+    return path.split(".").reduce((out, key) => out ? out[key] : undefined, obj)
+}
+
 module.exports = {
     requestPromise,
     generateProgress,
@@ -298,5 +310,6 @@ module.exports = {
     createTable,
     requireIfExists,
     formatDuration,
-    findKeyPair
+    findKeyPair,
+    getPath
 };
