@@ -66,7 +66,7 @@ class DocumentReferenceHandler extends stream.Transform
 
                 let pipeline;
 
-                if (this.options.dir && this.options.dir != "") {
+                if (this.options.dir && this.options.dir != "/dev/null") {
                     const dir = path.join(this.options.dir, "attachments");
                     fs.mkdirSync(dir, { recursive: true });
                     const writeStream = fs.createWriteStream(
