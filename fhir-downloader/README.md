@@ -39,6 +39,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `-T, --type [list]`     - Comma-separated list of zero or more resource types to download. If omitted downloads everything
 - `-s, --start [date]`    - Only include resources modified after this date
 - `-g, --group [id]`      - Group ID - only include resources that belong to this group
+- `-e, --elements [list]` - Comma-separated list of zero or more FHIR elements to include in the downloaded resources
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
 - `-p, --proxy [url]`     - Proxy server if needed
 - `--global`              - Global (system-level) export
