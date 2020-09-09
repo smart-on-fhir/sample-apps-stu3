@@ -40,6 +40,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `-s, --start [date]`    - Only include resources modified after this date
 - `-g, --group [id]`      - Group ID - only include resources that belong to this group
 - `-e, --elements [list]` - Comma-separated list of zero or more FHIR elements to include in the downloaded resources
+- `-i, --includeAssociatedData [list]` - String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
 - `-p, --proxy [url]`     - Proxy server if needed
 - `--global`              - Global (system-level) export

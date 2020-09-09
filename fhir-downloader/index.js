@@ -35,6 +35,7 @@ APP
     .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
     .option('-T, --type [list]'    , 'Zero or more resource types to download. If omitted downloads everything')
     .option('-e, --elements [list]', 'Zero or more FHIR elements to include in the downloaded resources')
+    .option('-i, --includeAssociatedData [list]', 'String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.')
     .option('-s, --start [date]'   , 'Only include resources modified after this date')
     .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
@@ -172,6 +173,10 @@ function downloadFhir() {
 
     if (APP.elements) {
         query.push(`_elements=${APP.elements}`);
+    }
+
+    if (APP.includeAssociatedData) {
+        query.push(`includeAssociatedData=${APP.includeAssociatedData}`);
     }
 
     if (query.length) {
