@@ -36,7 +36,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 
 - `-V, --version`         - output the version number
 - `-f, --fhir-url [url]`  - FHIR server URL. Defaults to the `fhir_url` option from the config file (if any)
-- `-T, --type [list]`     - Zero or more resource types to download. If omitted downloads everything
+- `-T, --type [list]`     - Comma-separated list of zero or more resource types to download. If omitted downloads everything
 - `-s, --start [date]`    - Only include resources modified after this date
 - `-g, --group [id]`      - Group ID - only include resources that belong to this group
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)

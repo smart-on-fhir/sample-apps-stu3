@@ -15,22 +15,47 @@ function requestPromise(options, delay = 0) {
         setTimeout(() => {
             request(Object.assign({ strictSSL: false }, options), (error, res) => {
                 if (error) {
-                    return reject(error);
+                    return reject(getRequestError(error, res));
                 }
                 if (res.statusCode >= 400) {
-                    console.log("Request options", options)
-                    let body = res.body
-                    if (typeof body == "object") {
-                        body = JSON.stringify(body, null, 4);
-                    }
-                    return reject(new Error(
-                        `${res.statusCode}: ${res.statusMessage}\n${body}`
-                    ));
+                    // console.log("Request options", options, res.headers)
+                    return reject(getRequestError(error, res));
                 }
                 resolve(res);
             });
         }, delay);
     });
+}
+
+function getRequestError(error, res) {
+    let message = (res.statusCode + " " + res.statusMessage).bold;
+    let body = res.body;
+
+    if (error) {
+        // @ts-ignore
+        message += `\n${error.message}`;
+    }
+
+    if (typeof body == "string" && String(res.headers["content-type"] || "").indexOf("application/json") === 0) {
+        body = JSON.parse(body);
+    }
+
+    if (body && typeof body == "object") {
+        if (body.resourceType == "OperationOutcome") {
+            // @ts-ignore
+            body = (body.issue || []).map(i => ` ${i.code} ${i.severity}: `.bgRed.bold.white + ` ${i.diagnostics}`).join("\n");
+        } else {
+            body = JSON.stringify(body, null, 4);    
+        }
+    }
+
+    if (body) {
+        // @ts-ignore
+        message += `\n${body}`;
+    }
+
+    // @ts-ignore
+    return new Error(message);
 }
 
 /**
@@ -305,6 +330,7 @@ function getPath(obj, path = "")
 
 module.exports = {
     requestPromise,
+    getRequestError,
     generateProgress,
     padRight,
     createTable,

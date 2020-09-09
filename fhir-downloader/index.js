@@ -198,7 +198,7 @@ function downloadFhir() {
     .then(downloadFiles)
     .catch(err => {
         // process.stdout.write("\r\033[?25h"); // show cursor
-        console.error(`Download failed: ${err.stack}`.red);
+        console.error(`Download failed: ${err.message}`.red);
         process.exit(1);
     })
     .then(() => {
