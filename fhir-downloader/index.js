@@ -30,6 +30,8 @@ let SERVER;
 // if it is not empty
 let ERROR_LOG = [];
 
+let STATUS_URL;
+
 APP
     .version(pkg.version)
     .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
@@ -190,35 +192,34 @@ function downloadFhir() {
         headers,
         proxy: APP.proxy
     })
-    .then(
-        res => {
-            console.log("Waiting for the server to generate the files...".green);
-            return waitForFiles(
-                res.headers["content-location"],
-                Date.now()
-            );
-        }
-    )
+    .then(res => {
+        console.log("Waiting for the server to generate the files...".green);
+        STATUS_URL = res.headers["content-location"];
+        return waitForFiles();
+    })
     .then(files => {
         let table = lib.createTable(files);
         table.log();
-        // process.stdout.write("\r\033[?25l"); // hide cursor
         return table;
     })
     .then(downloadFiles)
-    .catch(err => {
-        // process.stdout.write("\r\033[?25h"); // show cursor
-        console.error(`Download failed: ${err.message}`.red);
-        process.exit(1);
+    .catch(err => { throw new Error(`Download failed: ${err.message}`); })
+    .then(() => console.log(`\nAll files downloaded`.green))
+    .then(() => lib.ask("Do you want to signal the server that the downloaded files can be deleted [y/n]?"))
+    .then(answer => {
+        if (answer.toLowerCase() == "y") {
+            return cancel();
+        }
     })
     .then(() => {
-        console.log(`Completed in ${lib.formatDuration(Date.now() - start)}`)
+        STATUS_URL = "";
+        console.log(`Completed in ${lib.formatDuration(Date.now() - start)}`);
     });
 }
 
-function waitForFiles(url, startTime, timeToWait = 0) {
+function waitForFiles(startTime = Date.now(), timeToWait = 0) {
     return lib.requestPromise({
-        url,
+        url: STATUS_URL,
         proxy: APP.proxy,
         json: true,
         headers: ACCESS_TOKEN ? {
@@ -240,7 +241,7 @@ function waitForFiles(url, startTime, timeToWait = 0) {
                     );
                 }
             }
-            return waitForFiles(url, startTime, 1000);
+            return waitForFiles(startTime, 1000);
         }
 
         // Files generated
@@ -268,6 +269,18 @@ function downloadFiles(table) {
     for (let i = 0; i < APP.concurrency; i++) {
         downloadAttachment(table);
     }
+
+    function waitForDownloads() {
+        return lib.wait(100).then(() => {
+            if (table.isComplete()) {
+                // table.log();
+                return "All files downloaded";
+            }
+            return waitForDownloads();
+        });
+    }
+
+    return waitForDownloads();
 }
 
 function downloadAttachment(table) {
@@ -341,12 +354,6 @@ function downloadAttachment(table) {
             pipeline.resume();
         }
     }
-
-    if (table.isComplete()) {
-        console.log(`\nAll files downloaded`.green);
-    }
-
-    return true;
 }
 
 /**
@@ -414,6 +421,36 @@ function authorize() {
     });
 }
 
+function cancel() {
+    return lib.requestPromise({
+        method: "DELETE",
+        url: STATUS_URL,
+        proxy: APP.proxy,
+        json: true,
+        headers: ACCESS_TOKEN ? {
+            Authorization: "Bearer " + ACCESS_TOKEN
+        } : {}
+    }).then(
+        () => {
+            console.log("The export was removed!".bold.green);
+        },
+        err => {
+            console.log("Failed to remove the export!".bold.red);
+            console.error(String(err).red);
+        }
+    );
+}
+
+process.on("SIGINT", () => {
+    if (STATUS_URL) {
+        console.log("\nExport canceled. Aborting...");
+        cancel().then(() => process.exit());
+    }
+    else {
+        console.log("\nThe export was canceled!".bold.green);
+        process.exit();
+    }
+});
 
 // RUN! ------------------------------------------------------------------------
 if (APP.fhirUrl) {
@@ -442,8 +479,8 @@ if (APP.fhirUrl) {
             return downloadFhir();
         }
         
-        console.error(String(err).red);
-    });
+        console.error(String(err.message).red);
+    }).then(() => process.exit());
 }
 else {
     APP.help();

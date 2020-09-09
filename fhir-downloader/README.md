@@ -47,6 +47,11 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `--no-gzip`             - Do not request GZipped files
 - `-h, --help`            - output usage information
 
+## Canceling export jobs
+- If you exit the script using <kbd>Ctrl+C</kbd> while the exported files are being generated, a `DELETE` request will be sent to the server to inform it that the job should be canceled.
+- If you exit the script using <kbd>Ctrl+C</kbd> while the exported files are being downloaded, a `DELETE` request will be sent to the server to inform it that the files can be deleted.
+- After the files are generated and downloaded, you will be asked if you want to try to delete the remote files.
+
 ## Validating References
 There is a helper script in the root folder called `test-references.js`. It will walk all the `.ndjson`
 files in the `downloads` folder and insert all resources into an SQLite database. Then it will walk all the resources

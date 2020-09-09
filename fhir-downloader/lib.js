@@ -58,6 +58,28 @@ function getRequestError(error, res) {
     return new Error(message);
 }
 
+function wait(ms = 0) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
+function ask(question) {
+    return new Promise(resolve => {
+        process.stdout.write(`${question}: `);
+        
+        process.stdin.once("data", data => {
+            let answer = String(data).trim();
+
+            if (!answer) {
+                return ask(question);
+            }
+
+            resolve(answer);
+        });
+    });
+}
+
 /**
  * Generates a progress indicator
  * @param {number|string} pct The percentage
@@ -337,5 +359,7 @@ module.exports = {
     requireIfExists,
     formatDuration,
     findKeyPair,
-    getPath
+    getPath,
+    wait,
+    ask
 };
