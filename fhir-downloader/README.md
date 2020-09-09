@@ -44,6 +44,7 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
 - `-p, --proxy [url]`     - Proxy server if needed
 - `--global`              - Global (system-level) export
+- `--lenient`             - Sets a `Prefer: handling=lenient` request header to tell the server to try to ignore unsupported parameters
 - `--no-gzip`             - Do not request GZipped files
 - `-h, --help`            - output usage information
 

@@ -43,6 +43,7 @@ APP
     .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
     .option("-c, --concurrency [n]", "Number of parallel connections", 10)
+    .option('--lenient'            , 'Sets a "Prefer: handling=lenient" request header to tell the server to ignore unsupported parameters')
     .option('--global'             , 'Global (system-level) export')
     .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
@@ -151,6 +152,10 @@ function downloadFhir() {
 
     if (ACCESS_TOKEN) {
         headers.Authorization = "Bearer " + ACCESS_TOKEN;
+    }
+
+    if (APP.lenient) {
+        headers.Prefer += ", handling=lenient";
     }
 
     let url = APP.fhirUrl, query = [];
