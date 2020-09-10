@@ -544,10 +544,10 @@ function cancel() {
         } : {}
     }).then(
         () => {
-            console.log("The export was removed!".bold.green);
+            console.log("\nThe export was removed!".bold.green);
         },
         err => {
-            console.log("Failed to remove the export!".bold.red);
+            console.log("\nFailed to remove the export!".bold.red);
             console.error(String(err).red);
         }
     );

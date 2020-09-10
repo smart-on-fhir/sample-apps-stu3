@@ -37,13 +37,16 @@ Tools like https://bulk-data.smarthealthit.org/ can generate such a config file 
 - `-V, --version`         - output the version number
 - `-f, --fhir-url [url]`  - FHIR server URL. Defaults to the `fhir_url` option from the config file (if any)
 - `-T, --type [list]`     - Comma-separated list of zero or more resource types to download. If omitted downloads everything
-- `-s, --start [date]`    - Only include resources modified after this date
+- `-s, --_since [date]`   - Only include resources modified after this date
+- `-p, --patient [list]`  - Zero or more patient IDs to be included. Implies `--post`.
 - `-g, --group [id]`      - Group ID - only include resources that belong to this group
 - `-e, --elements [list]` - Comma-separated list of zero or more FHIR elements to include in the downloaded resources
 - `-i, --includeAssociatedData [list]` - String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.
 - `-d, --dir [directory]` - Download destination (default:`./downloads`)
 - `-p, --proxy [url]`     - Proxy server if needed
+- `--start [date]`        - Only include resources modified after this date (alias for "--_since"')
 - `--global`              - Global (system-level) export
+- `--post`                - Use POST kick-off requests
 - `--lenient`             - Sets a `Prefer: handling=lenient` request header to tell the server to try to ignore unsupported parameters
 - `--no-gzip`             - Do not request GZipped files
 - `-h, --help`            - output usage information
