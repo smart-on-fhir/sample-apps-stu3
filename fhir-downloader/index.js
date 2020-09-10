@@ -37,6 +37,7 @@ APP
     .option('-f, --fhir-url [url]' , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
     .option('-T, --type [list]'    , 'Zero or more resource types to download. If omitted downloads everything')
     .option('-e, --elements [list]', 'Zero or more FHIR elements to include in the downloaded resources')
+    .option('-p, --patient [list]' , 'Zero or more patient IDs to be included. Implies --post')
     .option('-i, --includeAssociatedData [list]', 'String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.')
     .option('-s, --start [date]'   , 'Only include resources modified after this date')
     .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
@@ -44,6 +45,7 @@ APP
     .option('-p, --proxy [url]'    , 'Proxy server if needed')
     .option("-c, --concurrency [n]", "Number of parallel connections", 10)
     .option('--lenient'            , 'Sets a "Prefer: handling=lenient" request header to tell the server to ignore unsupported parameters')
+    .option('--post'               , 'Use POST kick-off requests')
     .option('--global'             , 'Global (system-level) export')
     .option('--no-gzip'            , 'Do not request GZipped files')
     .parse(process.argv);
@@ -137,15 +139,10 @@ function init(config) {
     // });
 }
 
-function downloadFhir() {
-    
-    if (!ACCESS_TOKEN && config.jwks && config.client_id) {
-        return authorize().then(downloadFhir);
-    }
-
-    let start = Date.now();
-
-    let headers = {
+// -----------------------------------------------------------------------------
+function buildKickOffHeaders()
+{
+    const headers = {
         Accept: "application/fhir+json",
         Prefer: "respond-async"
     };
@@ -158,59 +155,135 @@ function downloadFhir() {
         headers.Prefer += ", handling=lenient";
     }
 
-    let url = APP.fhirUrl, query = [];
+    return headers;
+}
 
-    if (APP.global) {
-        url += `/$export`;
-    }
-    else if (APP.group) {
-        url += `/Group/${APP.group}/$export`
-    }
-    else {
-        url += `/Patient/$export`
+function buildKickOffQuery(params)
+{
+    if (APP.start) {
+        params.append("_since", APP.start);
     }
 
     if (APP.type) {
-        query.push(`_type=${APP.type}`);
-    }
-
-    if (APP.start) {
-        query.push(`_since=${APP.start}`);
+        params.append("_type", APP.type);
     }
 
     if (APP.elements) {
-        query.push(`_elements=${APP.elements}`);
+        params.append("_elements", APP.elements);
     }
 
     if (APP.includeAssociatedData) {
-        query.push(`includeAssociatedData=${APP.includeAssociatedData}`);
+        params.append("includeAssociatedData", APP.includeAssociatedData);
+    }
+}
+
+function buildKickOffPayload()
+{
+    const payload = {
+        resourceType: "Parameters",
+        parameter: []
+    };
+
+    // _since ------------------------------------------------------------------
+    if (APP.start) {
+        payload.parameter.push({
+            name: "_since",
+            valueInstant: APP.start
+        });
     }
 
-    if (query.length) {
-        url += "?" + query.join("&");
+    // _type -------------------------------------------------------------------
+    if (APP.type) {
+        String(APP.type).trim().split(/\s*,\s*/).forEach(type => {
+            payload.parameter.push({
+                name: "_type",
+                valueString: type
+            });
+        });
     }
 
-    // console.log(url)
+    // _elements ---------------------------------------------------------------
+    if (APP.elements) {
+        payload.parameter.push({
+            name: "_elements",
+            valueString: APP.elements
+        });
+    }
 
-    return lib.requestPromise({
-        url,
-        headers,
-        proxy: APP.proxy
-    })
+    // patient -----------------------------------------------------------------
+    if (APP.patient) {
+        String(APP.patient).trim().split(/\s*,\s*/).forEach(id => {
+            payload.parameter.push({
+                name: "patient",
+                valueReference: {
+                    reference: `Patient/${id}`
+                }
+            });
+        });
+    }
+
+    return payload;
+}
+
+function kickOff()
+{
+    let options = {
+        proxy  : APP.proxy,
+        headers: buildKickOffHeaders()
+    };
+
+    const base = APP.fhirUrl.replace(/\/*$/, "/");
+
+    if (APP.global) {
+        options.url = new URL("/$export", base);
+    }
+    else if (APP.group) {
+        options.url = new URL(`/Group/${APP.group}/$export`, base);
+    }
+    else {
+        options.url = new URL("Patient/$export", base);
+    }
+
+    if (APP.post || APP.patient) {
+        options.method = "POST";
+        options.json   = true;
+        options.body   = buildKickOffPayload();
+    } else {
+        buildKickOffQuery(options.url.searchParams);
+    }
+
+    console.log(options)
+
+    return lib.requestPromise(options);
+}
+// -----------------------------------------------------------------------------
+
+function downloadFhir() {
+    
+    if (!ACCESS_TOKEN && config.jwks && config.client_id) {
+        return authorize().then(downloadFhir);
+    }
+
+    let start = Date.now();
+
+    return kickOff()
     .then(res => {
         console.log("Waiting for the server to generate the files...".green);
         STATUS_URL = res.headers["content-location"];
         return waitForFiles();
     })
     .then(files => {
-        let table = lib.createTable(files);
-        table.log();
-        return table;
+        if (files.length) {
+            let table = lib.createTable(files);
+            table.log();
+            return downloadFiles(table)
+                .catch(err => { throw new Error(`Download failed: ${err.message}`); })
+                .then(() => console.log(`\nAll files downloaded`.green))
+        } else {
+            console.log(`\nNo data was found on the server to match your export parameters`.yellow)
+        }
     })
-    .then(downloadFiles)
-    .catch(err => { throw new Error(`Download failed: ${err.message}`); })
-    .then(() => console.log(`\nAll files downloaded`.green))
-    .then(() => lib.ask("Do you want to signal the server that the downloaded files can be deleted [y/n]?"))
+    .then(() => lib.ask("Do you want to signal the server that the export can be removed? [Y/n]"))
     .then(answer => {
         if (answer.toLowerCase() == "y") {
             return cancel();

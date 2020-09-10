@@ -28,30 +28,33 @@ function requestPromise(options, delay = 0) {
 }
 
 function getRequestError(error, res) {
-    let message = (res.statusCode + " " + res.statusMessage).bold;
-    let body = res.body;
+    let message = (error ? error.message : "Internal error").bold;
+    if (res) {
+        message = (res.statusCode + " " + res.statusMessage).bold;
+        let body = res.body;
 
-    if (error) {
-        // @ts-ignore
-        message += `\n${error.message}`;
-    }
-
-    if (typeof body == "string" && String(res.headers["content-type"] || "").indexOf("application/json") === 0) {
-        body = JSON.parse(body);
-    }
-
-    if (body && typeof body == "object") {
-        if (body.resourceType == "OperationOutcome") {
+        if (error) {
             // @ts-ignore
-            body = (body.issue || []).map(i => ` ${i.code} ${i.severity}: `.bgRed.bold.white + ` ${i.diagnostics}`).join("\n");
-        } else {
-            body = JSON.stringify(body, null, 4);    
+            message += `\n${error.message}`;
         }
-    }
 
-    if (body) {
-        // @ts-ignore
-        message += `\n${body}`;
+        if (typeof body == "string" && String(res.headers["content-type"] || "").indexOf("application/json") === 0) {
+            body = JSON.parse(body);
+        }
+
+        if (body && typeof body == "object") {
+            if (body.resourceType == "OperationOutcome") {
+                // @ts-ignore
+                body = (body.issue || []).map(i => ` ${i.code} ${i.severity}: `.bgRed.bold.white + ` ${i.diagnostics}`).join("\n");
+            } else {
+                body = JSON.stringify(body, null, 4);    
+            }
+        }
+
+        if (body) {
+            // @ts-ignore
+            message += `\n${body}`;
+        }
     }
 
     // @ts-ignore
