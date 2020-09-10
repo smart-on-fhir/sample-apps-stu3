@@ -303,6 +303,12 @@ function downloadFhir() {
 }
 
 function waitForFiles(startTime = Date.now(), timeToWait = 0) {
+
+    // Can happen after Ctrl+C while waiting
+    if (!STATUS_URL) {
+        return Promise.resolve();
+    }
+
     return lib.requestPromise({
         url: STATUS_URL,
         proxy: APP.proxy,
@@ -529,7 +535,10 @@ function cancel() {
 process.on("SIGINT", () => {
     if (STATUS_URL) {
         console.log("\nExport canceled. Aborting...");
-        cancel().then(() => process.exit());
+        cancel().then(() => {
+            STATUS_URL = "";
+            process.exit();
+        });
     }
     else {
         console.log("\nThe export was canceled!".bold.green);
