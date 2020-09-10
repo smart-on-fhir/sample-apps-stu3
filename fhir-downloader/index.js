@@ -11,6 +11,7 @@ const Url          = require("url");
 const APP          = require("commander");
 const jwkToPem     = require("jwk-to-pem");
 const stream       = require("stream");
+const moment       = require("moment");
 const lib          = require("./lib");
 const config       = lib.requireIfExists("./config.json") || {};
 const pkg          = require("./package.json");
@@ -39,15 +40,8 @@ APP
     .option('-e, --elements [list]', 'Zero or more FHIR elements to include in the downloaded resources')
     .option('-p, --patient [list]' , 'Zero or more patient IDs to be included. Implies --post')
     .option('-i, --includeAssociatedData [list]', 'String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.')
-    .option('-s, --start [date]'   , 'Only include resources modified after this date')
-    .option('-g, --group [id]'     , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
-    .option('-d, --dir [directory]', `Download destination`, `${__dirname}/downloads`)
-    .option('-p, --proxy [url]'    , 'Proxy server if needed')
-    .option("-c, --concurrency [n]", "Number of parallel connections", 10)
-    .option('--lenient'            , 'Sets a "Prefer: handling=lenient" request header to tell the server to ignore unsupported parameters')
-    .option('--post'               , 'Use POST kick-off requests')
-    .option('--global'             , 'Global (system-level) export')
-    .option('--no-gzip'            , 'Do not request GZipped files')
+    .option('--start [date]'        , 'Only include resources modified after this date (alias of "--_since"')
+    .option('-s, --_since [date]'   , 'Only include resources modified after this date')
     .parse(process.argv);
 
 
@@ -139,7 +133,18 @@ function init(config) {
     // });
 }
 
-// -----------------------------------------------------------------------------
+function getSince()
+{
+    let since = String(APP._since || APP.start || "");
+    if (since) {
+        const instant = moment(new Date(since));
+        if (instant.isValid()) {
+            return instant.format();
+        }
+    }
+    return null;
+}
+
 function buildKickOffHeaders()
 {
     const headers = {
@@ -160,8 +165,9 @@ function buildKickOffHeaders()
 
 function buildKickOffQuery(params)
 {
-    if (APP.start) {
-        params.append("_since", APP.start);
+    const since = getSince();
+    if (since) {
+        params.append("_since", since);
     }
 
     if (APP.type) {
@@ -185,10 +191,11 @@ function buildKickOffPayload()
     };
 
     // _since ------------------------------------------------------------------
-    if (APP.start) {
+    const since = getSince();
+    if (since) {
         payload.parameter.push({
             name: "_since",
-            valueInstant: APP.start
+            valueInstant: since
         });
     }
 
