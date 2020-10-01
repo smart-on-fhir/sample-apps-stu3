@@ -1,2 +1,2 @@
-# sample-apps-stu3
+# sample-apps-fhir-stu3
 Collection of simple sample apps
