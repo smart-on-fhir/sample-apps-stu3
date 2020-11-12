@@ -6,6 +6,7 @@ const request      = require("request");
 const jwt          = require("jsonwebtoken");
 const crypto       = require("crypto");
 const fs           = require("fs");
+const Path         = require("path");
 const express      = require("express");
 const Url          = require("url");
 const APP          = require("commander");
@@ -359,16 +360,23 @@ function waitForFiles(startTime = Date.now(), timeToWait = 0) {
         // Files generated
         else if (res.statusCode == 200) {
             process.stdout.write(lib.generateProgress(100));
-            console.log(``);
-
-            // v2: Try obtaining the links from the body
-            if (res.body && Array.isArray(res.body.output)) {
-                return res.body.output.map(f => f.url);
+            console.log("");
+            if (res.body) {
+                let files = [];
+                if (Array.isArray(res.body.output)) {
+                    files = files.concat(res.body.output.map(f => ({
+                        url : f.url,
+                        type: "exported"
+                    })));
+                }
+                if (Array.isArray(res.body.deleted)) {
+                    files = files.concat(res.body.deleted.map(f => ({
+                        url : f.url,
+                        type: "deleted"
+                    })));
+                }
+                return files;
             }
-
-            // v1: Link header. A link can look like <meta.rdf>;rel=meta
-            return String(res.headers.link || "").split(/\s*,\s*/)
-                .map(f => f.replace(/^\s*<\s*/, "").replace(/\s*>.*$/, ""));
         }
 
         // Any other status is considered an error
@@ -447,7 +455,13 @@ function downloadAttachment(table) {
 
         // Write files to FS if needed
         if (APP.dir && APP.dir != "/dev/null") {
-            pipeline = pipeline.pipe(fs.createWriteStream(`${APP.dir}/${file.name}`));
+            if (file.type === "deleted") {
+                const dir = Path.join(APP.dir, "deleted");
+                fs.mkdirSync(dir, { recursive: true });
+                pipeline = pipeline.pipe(fs.createWriteStream(`${dir}/${file.name}`));
+            } else {
+                pipeline = pipeline.pipe(fs.createWriteStream(`${APP.dir}/${file.name}`));
+            }
         }
 
         stream.finished(pipeline, error => {

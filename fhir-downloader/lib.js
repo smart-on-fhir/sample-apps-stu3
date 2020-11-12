@@ -206,8 +206,9 @@ function createTable(files) {
         _logged: 0,
 
         files: files.map(f => ({
-            url      : f,
-            name     : f.split("/").pop(),
+            url      : f.url,
+            name     : f.url.split("/").pop(),
+            type     : f.type,
             status   : "Pending",
             chunks   : 0,
             bytes    : 0,
@@ -238,7 +239,7 @@ function createTable(files) {
             // Convert those files to table rows
             files.forEach(f => {
                 let line = (
-                    padRight(`┃ ${f.name}`  , 42) +
+                    padRight(`┃ ${f.name}${f.type == "deleted" ? " (del)" : ""}`, 42) +
                     padRight(`┃ ${f.chunks}`, 9) +
                     padRight(`┃ ${f.status}`, 14) +
                     padRight(`┃ ${f.rawBytes ? padLeft(humanFileSize(f.rawBytes), 9) : "     -"}` , 13) + 

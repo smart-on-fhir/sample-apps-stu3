@@ -36,7 +36,7 @@ class DocumentReferenceHandler extends stream.Transform
             ));
         }
 
-        if (!resource.id) {
+        if (!resource.id && resourceType !== "Bundle") {
             return callback(new Error(
                 `No "id" found for resource number ${this.num}.`
             ));
