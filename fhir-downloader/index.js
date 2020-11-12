@@ -313,8 +313,8 @@ function downloadFhir() {
         }
     })
     .then(() => lib.ask("Do you want to signal the server that the export can be removed? [Y/n]"))
-    .then(answer => {
-        if (answer.toLowerCase() == "y") {
+    .then(answer => {s
+        if (!answer || answer.toLowerCase() == "y") {
             return cancel();
         }
     })
@@ -412,9 +412,9 @@ function downloadAttachment(table) {
         // Create a download stream
         const download = request.get({
             strictSSL: false,
-            url: file.url,
-            proxy: APP.proxy,
-            gzip: !!APP.gzip,
+            url      : file.url,
+            proxy    : APP.proxy,
+            gzip     : !!APP.gzip,
             headers: {
                 Accept: "application/fhir+ndjson",
                 Authorization: ACCESS_TOKEN ? "Bearer " + ACCESS_TOKEN : undefined
@@ -443,6 +443,9 @@ function downloadAttachment(table) {
         });
 
         // Convert to stream of JSON objects
+        /**
+         * @type {*}
+         */
         let pipeline = download.pipe(new NdJsonStream());
 
         // Handle DocumentReference with absolute URLs
@@ -558,9 +561,11 @@ function cancel() {
         } : {}
     }).then(
         () => {
+            // @ts-ignore
             console.log("\nThe export was removed!".bold.green);
         },
         err => {
+            // @ts-ignore
             console.log("\nFailed to remove the export!".bold.red);
             console.error(String(err).red);
         }
@@ -576,6 +581,7 @@ process.on("SIGINT", () => {
         });
     }
     else {
+        // @ts-ignore
         console.log("\nThe export was canceled!".bold.green);
         process.exit();
     }

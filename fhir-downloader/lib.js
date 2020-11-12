@@ -70,15 +70,8 @@ function wait(ms = 0) {
 function ask(question) {
     return new Promise(resolve => {
         process.stdout.write(`${question}: `);
-        
         process.stdin.once("data", data => {
-            let answer = String(data).trim();
-
-            if (!answer) {
-                return ask(question);
-            }
-
-            resolve(answer);
+            resolve(String(data).trim());
         });
     });
 }
