@@ -313,7 +313,7 @@ function downloadFhir() {
         }
     })
     .then(() => lib.ask("Do you want to signal the server that the export can be removed? [Y/n]"))
-    .then(answer => {s
+    .then(answer => {
         if (!answer || answer.toLowerCase() == "y") {
             return cancel();
         }
