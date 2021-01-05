@@ -356,6 +356,7 @@ function waitForFiles(startTime = Date.now(), timeToWait = 0) {
         // Still working?
         if (res.statusCode == 202) {
             let pct = res.headers["x-progress"];
+            let retryAfter = res.headers["retry-after"] || "";
             if (pct) {
                 pct = parseInt(pct, 10)
                 if (!isNaN(pct) && isFinite(pct) && pct >= 0) {
@@ -367,6 +368,14 @@ function waitForFiles(startTime = Date.now(), timeToWait = 0) {
                     );
                 }
             }
+
+            if (retryAfter.match(/^\d+$/)) {
+                retryAfter = parseInt(retryAfter, 10);
+                if (!isNaN(retryAfter) && isFinite(retryAfter) && retryAfter >= 0) {
+                    return waitForFiles(startTime, retryAfter);        
+                }
+            }
+
             return waitForFiles(startTime, 1000);
         }
 
