@@ -36,22 +36,23 @@ let STATUS_URL;
 
 APP
     .version(pkg.version)
-    .option('-f, --fhir-url [url]'  , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
-    .option('-T, --type [list]'     , 'Zero or more resource types to download. If omitted downloads everything')
-    .option('-e, --elements [list]' , 'Zero or more FHIR elements to include in the downloaded resources')
-    .option('-p, --patient [list]'  , 'Zero or more patient IDs to be included. Implies --post')
+    .option('-f, --fhir-url [url]'              , 'FHIR server URL', config.fhir_url || "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjF9/fhir")
+    .option('-T, --type [list]'                 , 'Zero or more resource types to download. If omitted downloads everything')
+    .option('-e, --elements [list]'             , 'Zero or more FHIR elements to include in the downloaded resources')
+    .option('-p, --patient [list]'              , 'Zero or more patient IDs to be included. Implies --post')
     .option('-i, --includeAssociatedData [list]', 'String of comma delimited values. When provided, server with support for the parameter and requested values SHALL return a pre-defined set of metadata associated with the request.')
-    .option('--start [date]'        , 'Only include resources modified after this date (alias of "--_since"')
-    .option('-s, --_since [date]'   , 'Only include resources modified after this date')
-    .option('-g, --group [id]'      , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
-    .option('--_typeFilter [string]', 'Experimental _typeFilter parameter passed as is to the server')
-    .option('-d, --dir [directory]' , `Download destination`, `${__dirname}/downloads`)
-    .option('-p, --proxy [url]'     , 'Proxy server if needed')
-    .option("-c, --concurrency [n]" , "Number of parallel connections", 10)
-    .option('--lenient'             , 'Sets a "Prefer: handling=lenient" request header to tell the server to ignore unsupported parameters')
-    .option('--post'                , 'Use POST kick-off requests')
-    .option('--global'              , 'Global (system-level) export')
-    .option('--no-gzip'             , 'Do not request GZipped files')
+    .option('--start [date]'                    , 'Only include resources modified after this date (alias of "--_since"')
+    .option('-s, --_since [date]'               , 'Only include resources modified after this date')
+    .option('-g, --group [id]'                  , 'Group ID - only include resources that belong to this group. Ignored if --global is set')
+    .option('--_typeFilter [string]'            , 'Experimental _typeFilter parameter passed as is to the server')
+    .option('-d, --dir [directory]'             , 'Download destination', `${__dirname}/downloads`)
+    .option('-p, --proxy [url]'                 , 'Proxy server if needed')
+    .option("-c, --concurrency [n]"             , 'Number of parallel connections', 10)
+    .option('--lenient'                         , 'Sets a "Prefer: handling=lenient" request header to tell the server to ignore unsupported parameters')
+    .option('--post'                            , 'Use POST kick-off requests')
+    .option('--global'                          , 'Global (system-level) export')
+    .option('--no-gzip'                         , 'Do not request GZipped files')
+    .option('-F, --output-format [string]'      , 'The output format you expect. Defaults to "application/fhir+ndjson"', "application/fhir+ndjson")
     .parse(process.argv);
 
 
@@ -195,6 +196,10 @@ function buildKickOffQuery(params)
     if (APP._typeFilter) {
         params.append("_typeFilter", APP._typeFilter);
     }
+
+    if (APP.outputFormat) {
+        params.append("_outputFormat", APP.outputFormat);
+    }
 }
 
 function buildKickOffPayload()
@@ -248,6 +253,14 @@ function buildKickOffPayload()
         payload.parameter.push({
             name: "_typeFilter",
             valueString: APP._typeFilter
+        });
+    }
+
+    // _outputFormat -----------------------------------------------------------
+    if (APP.outputFormat) {
+        payload.parameter.push({
+            name: "_outputFormat",
+            valueString: APP.outputFormat
         });
     }
 
