@@ -609,11 +609,8 @@ process.on("SIGINT", () => {
     }
 });
 
-// RUN! ------------------------------------------------------------------------
-if (APP.fhirUrl) {
-    init(config);
-    
-    downloadFhir().then(() => {
+function run() {
+    return downloadFhir().then(() => {
         if (SERVER) SERVER.close();
 
         if (ERROR_LOG.length) {
@@ -633,11 +630,26 @@ if (APP.fhirUrl) {
             ACCESS_TOKEN = null;
 
             // and then try again
-            return downloadFhir();
+            return run();
         }
         
         console.error(String(err.message).red);
-    }).then(() => process.exit());
+
+        if(err.transient) {
+            lib.ask("Operation failed due to a transient error. Would you like to retry? [Y/n]")
+                .then(answer => {
+                    if(answer.toLowerCase() === 'y') {
+                        return run()
+                    }
+                })
+        }
+    })
+}
+// RUN! ------------------------------------------------------------------------
+if (APP.fhirUrl) {
+    init(config);
+
+    run().then(() => process.exit());
 }
 else {
     APP.help();
