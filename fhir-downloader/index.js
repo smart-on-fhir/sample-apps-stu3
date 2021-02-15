@@ -314,6 +314,18 @@ function downloadFhir() {
         STATUS_URL = res.headers["content-location"];
         return waitForFiles();
     })
+    .catch(err => {
+        if(err.transient) {
+            return lib.ask("Operation failed due to a transient error. Would you like to retry? [Y/n]")
+                .then(answer => {
+                    if(answer.toLowerCase() === 'y') {
+                        return waitForFiles()
+                    }
+                    return Promise.reject(new Error('Cancelled by user.'));
+                })
+        }
+        return Promise.reject(err)
+    })
     .then(files => {
         if (files.length) {
             let table = lib.createTable(files);
@@ -609,8 +621,11 @@ process.on("SIGINT", () => {
     }
 });
 
-function run() {
-    return downloadFhir().then(() => {
+// RUN! ------------------------------------------------------------------------
+if (APP.fhirUrl) {
+    init(config);
+    
+    downloadFhir().then(() => {
         if (SERVER) SERVER.close();
 
         if (ERROR_LOG.length) {
@@ -630,26 +645,11 @@ function run() {
             ACCESS_TOKEN = null;
 
             // and then try again
-            return run();
+            return downloadFhir();
         }
         
         console.error(String(err.message).red);
-
-        if(err.transient) {
-            lib.ask("Operation failed due to a transient error. Would you like to retry? [Y/n]")
-                .then(answer => {
-                    if(answer.toLowerCase() === 'y') {
-                        return run()
-                    }
-                })
-        }
-    })
-}
-// RUN! ------------------------------------------------------------------------
-if (APP.fhirUrl) {
-    init(config);
-
-    run().then(() => process.exit());
+    }).then(() => process.exit());
 }
 else {
     APP.help();
