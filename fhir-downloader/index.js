@@ -277,10 +277,10 @@ function kickOff()
     const base = APP.fhirUrl.replace(/\/*$/, "/");
 
     if (APP.global) {
-        options.url = new URL("/$export", base);
+        options.url = new URL("$export", base);
     }
     else if (APP.group) {
-        options.url = new URL(`/Group/${APP.group}/$export`, base);
+        options.url = new URL(`Group/${APP.group}/$export`, base);
     }
     else {
         options.url = new URL("Patient/$export", base);
