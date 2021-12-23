@@ -29,6 +29,8 @@ function requestPromise(options, delay = 0) {
 
 function getRequestError(error, res) {
     let message = (error ? error.message : "Internal error").bold;
+    let transient = false;
+
     if (res) {
         message = (res.statusCode + " " + res.statusMessage).bold;
         let body = res.body;
@@ -44,8 +46,10 @@ function getRequestError(error, res) {
 
         if (body && typeof body == "object") {
             if (body.resourceType == "OperationOutcome") {
+                const issue = body.issue || []
                 // @ts-ignore
-                body = (body.issue || []).map(i => ` ${i.code} ${i.severity}: `.bgRed.bold.white + ` ${i.diagnostics}`).join("\n");
+                body = issue.map(i => ` ${i.code} ${i.severity}: `.bgRed.bold.white + ` ${i.diagnostics}`).join("\n");
+                transient = issue.every(i => i.code === 'transient')
             } else {
                 body = JSON.stringify(body, null, 4);    
             }
@@ -57,8 +61,10 @@ function getRequestError(error, res) {
         }
     }
 
+    const result = new Error(message);
+    result.transient = transient;
     // @ts-ignore
-    return new Error(message);
+    return result
 }
 
 function wait(ms = 0) {

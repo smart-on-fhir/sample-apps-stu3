@@ -280,7 +280,7 @@ function kickOff()
         options.url = new URL("$export", base);
     }
     else if (APP.group) {
-        options.url = new URL(`/Group/${APP.group}/$export`, base);
+        options.url = new URL(`Group/${APP.group}/$export`, base);
     }
     else {
         options.url = new URL("Patient/$export", base);
@@ -313,6 +313,18 @@ function downloadFhir() {
         console.log("Waiting for the server to generate the files...".green);
         STATUS_URL = res.headers["content-location"];
         return waitForFiles();
+    })
+    .catch(err => {
+        if(err.transient) {
+            return lib.ask("Operation failed due to a transient error. Would you like to retry? [Y/n]")
+                .then(answer => {
+                    if(answer.toLowerCase() === 'y') {
+                        return waitForFiles()
+                    }
+                    return Promise.reject(new Error('Cancelled by user.'));
+                })
+        }
+        return Promise.reject(err)
     })
     .then(files => {
         if (files.length) {
