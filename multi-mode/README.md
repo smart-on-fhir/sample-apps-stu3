@@ -1,9 +1,6 @@
 # Multi Mode Demo App
 
-This is simple app that can be launched in embedded, standalone, and population modes
-through three discrete launch endpoints. It demonstrates how you can perform different 
-actions depending on the scopes you have received.
-
+This is a simple app that can be launched in embedded, standalone, and population modes.
 
 ## Install & Run
 Install NodeJS, Go to the app directory and run:
@@ -21,10 +18,8 @@ You should see something like
 
 You can stop the server if needed using <kbd>Ctrl+C</kbd>.
 
-To launch:
+## Launch
 
-http://127.0.0.1:9090/launch-embedded.html?launch=eyJhIjoiMSJ9&iss=http%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr3%2Ffhir
-
-http://127.0.0.1:9090/launch-standalone.html
-
-http://127.0.0.1:9090/launch-population.html
+Embedded: http://127.0.0.1:9090/launch.html?launch=eyJhIjoiMSJ9&iss=http%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr4%2Ffhir
+Standalone: http://127.0.0.1:9090/launch.html
+Standalone/population: http://127.0.0.1:9090/launch.html?scope=user%2F%2A.read&iss=https%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr4%2Fsim%2FeyJoIjoiMSIsImkiOiIxIn0%2Ffhir

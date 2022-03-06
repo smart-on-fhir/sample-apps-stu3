@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="node_modules/fhirclient/build/fhir-client.js"></script>
+    <script>
+        function urlParam(p) {
+            var query  = location.search.replace(/^\?/, "");
+            var data   = query.split("&");
+            var result = [];
+            var i, item;
+
+            for (i = 0; i < data.length; i++) {
+                item = data[i].split("=");
+                if (item[0] === p) {
+                    return decodeURIComponent(item[1].replace(/\+/g, '%20'));
+                }
+            }
+
+            return null;
+        }
+
+        if (urlParam("launch")) {
+            // embedded mode
+            FHIR.oauth2.authorize({
+                "clientId": urlParam("clientId") || "my_web_app",
+                "scope": urlParam("scope") || "patient/*.read"
+            });
+        } else {
+            // standalone mode
+            FHIR.oauth2.authorize({
+                "clientId": urlParam("clientId") || "my_web_app",
+                "scope":  urlParam("scope") || "patient/*.read launch/patient",
+                "iss": urlParam("iss") || "https://launch.smarthealthit.org/v/r4/sim/eyJoIjoiMSIsImIiOiI4N2EzMzlkMC04Y2FlLTQxOGUtODljNy04NjUxZTZhYWIzYzYiLCJpIjoiMSJ9/fhir"
+            });
+        }
+    </script>
+  </head>
+  <body>Loading...</body>
+</html>
