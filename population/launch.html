@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script src="node_modules/fhirclient/fhir-client.js"></script>
+    <script src="node_modules/fhirclient/build/fhir-client.js"></script>
     <script>
       FHIR.oauth2.authorize({
-        "client_id": "my_web_app",
-        "scope"    : "user/*.*"
+        "clientId": "my_web_app",
+        "scope": "user/*.read"
       });
     </script>
   </head>

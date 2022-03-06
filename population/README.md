@@ -1,8 +1,6 @@
 # Population
 
-This is simple app finds all the patients that er taking medications and then
-counts those medications. Please see the code for details.
-
+This sample app finds all the active patients that are taking medications
 
 ## Install & Run
 Install NodeJS, Go to the app directory and run:

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="node_modules/fhirclient/fhir-client.js"></script>
+        <script src="node_modules/fhirclient/build/fhir-client.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
         <style>
         .progressbar {
@@ -59,7 +59,7 @@
         function getName(patient) {
             var name = patient.name;
             if (name && name.length > 0) {
-                return name[0].given.join(" ") +" "+ name[0].family;
+                return name.map((n) => n.given.join(" ") + " " + n.family).join(" / ");
             }
             return "deidentified patient";
         }
@@ -84,8 +84,7 @@
             $(".count").text(" (" + length + ")");
         }
 
-        FHIR.oauth2.ready(function(smart){
-            var api = smart.api;
+        FHIR.oauth2.ready(function(client){
             var queue = [
                 function() {
                     printDataSet(patientsData)
@@ -106,13 +105,7 @@
             }
 
             function processPatient(patient) {
-                api.fetchAll({
-                    type: "MedicationRequest",
-                    query: {
-                        patient: patient.id,
-                        status: "active"
-                    }
-                })
+                client.request(`MedicationRequest?patient=${patient.id}&status=active`, {'pageLimit':0, 'flat':true})
                 .then(function(meds) {
                     patientsData.push({
                         name      : getName(patient),
@@ -122,7 +115,7 @@
                 });
             }
 
-            api.fetchAll({ type: "Patient" }).then(function(patients) {
+            client.request('Patient', {'pageLimit':0, 'flat':true}).then(function(patients) {
                 patients.forEach(function(patient) {
                     queue.push(function() {
                         processPatient(patient)
