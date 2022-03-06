@@ -25,11 +25,11 @@ function refreshApp() {
 
 function initialize(settings) {
     setSettings({
-        client_id     : settings.client_id,
-        secret        : settings.secret,
-        scope         : settings.scope + " launch",
-        launch_id     : urlParam("launch"),
-        api_server_uri: urlParam("iss")
+        clientId     : settings.clientId,
+        clientSecret : settings.clientSecret,
+        scope        : settings.scope,
+        launch       : urlParam("launch"),
+        iss          : urlParam("iss")
     });
     clearAuthToken();
     refreshApp();
@@ -60,38 +60,38 @@ function setSettings(data) {
 }
 
 function hasAuthToken() {
-    return sessionStorage.tokenResponse !== undefined;
+    return sessionStorage.SMART_KEY !== undefined;
 }
 
 function clearAuthToken() {
-    delete sessionStorage.tokenResponse;
+    let key = sessionStorage.SMART_KEY;
+    if (key) delete sessionStorage[key.substring(1,key.length-1)];
+    delete sessionStorage.SMART_KEY;
 }
 
 function getHumanName(name) {
-    return name.given.join(" ") + " " + name.family;
+    return name.map((name) => name.given.join(" ") + " " + name.family).join(" / ");
 }
 
 function authorize() {
     var settings = getSettings();
 
     FHIR.oauth2.authorize({
-        "client": {
-            "client_id": settings.client_id,
-            "scope"    : settings.scope,
-            "launch"   : settings.launch_id
-        },
-        "server": settings.api_server_uri
+        "clientId"     : settings.clientId,
+        "scope"        : settings.scope,
+        "clientSecret" : settings.clientSecret,
+        "launch"       : settings.launch,
+        "iss"          : settings.iss
     });
 }
 
 function getPatientName() {
     var ret = $.Deferred();
 
-    FHIR.oauth2.ready(function(smart) {
-        var patient = smart.patient;
-        patient.read().then(function(pt) {
-            ret.resolve(getHumanName(pt.name[0]));
-        }).fail(function() {
+    FHIR.oauth2.ready(function(client) {
+        client.patient.read().then(function(pt) {
+            ret.resolve(getHumanName(pt.name));
+        }, function() {
             ret.reject("Could not fetch patient name");
         });
     });
@@ -102,18 +102,15 @@ function getPatientName() {
 function getUserName() {
     var ret = $.Deferred();
 
-    FHIR.oauth2.ready(function(smart){
-        var user = smart.user;
-        
-        // smart.userId = "Patient/" + smart.userId
-        $.when(user.read())
+    FHIR.oauth2.ready(function(client){
+        client.user.read()
         .then(function(pt) {
             if (pt) {
                 if (pt.resourceType === "Practitioner" ||
                     pt.resourceType === "RelatedPerson" ||
                     pt.resourceType === "Patient")
                 {
-                    ret.resolve(getHumanName(pt.name[0]));
+                    ret.resolve(getHumanName(pt.name));
                 }
                 else {
                     ret.reject("Could not fetch user name");
@@ -122,8 +119,7 @@ function getUserName() {
             else {
                 ret.resolve(pt);
             }
-        })
-        .fail(function(error) {
+        }, function(error) {
             window.SMART = smart
             console.log(smart)
             console.log(error)
