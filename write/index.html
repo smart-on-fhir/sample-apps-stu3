@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
  <head>
-    <script src="node_modules/fhirclient/fhir-client.js"></script>
+    <script src="node_modules/fhirclient/build/fhir-client.js"></script>
     <style>
         pre {
             margin: 0;
@@ -14,7 +14,7 @@
     (function () {
         "use strict";
 
-        FHIR.oauth2.ready(function(smart){
+        FHIR.oauth2.ready(function(client){
             var resource = {
                 "resourceType": "Patient",
                 "text": {
@@ -55,15 +55,14 @@
             };
 
             // Create the patient and then update its active flag to "true"
-            smart.api.create({resource: resource}).done(function(r) {
+            client.create(resource).then(function(patient) {
 
                 // NOTE that the patient will now have new "id" assigned by the
                 // server. The next request will be PUT (update) and that id will
                 // be required...
-                var patient = r.data;
                 patient["active"] = true;
-                smart.api.update({resource: patient}).done(function(r) {
-                    var out = JSON.stringify(r.data, null, "   ");
+                client.update(patient).then(function(r) {
+                    var out = JSON.stringify(r, null, "   ");
                     document.getElementsByTagName("pre")[0].innerText = "Now " +
                       "we have the following patient in the FHIR server:\n\n" +
                       out;
