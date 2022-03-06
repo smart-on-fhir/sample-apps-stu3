@@ -56,7 +56,7 @@ function getPatients() {
 
     // Query the "/Patient" to get the patient count
     return requestPromise({
-        url: config.fhir_url + "/Patient",
+        url: config.fhir_url + "/Patient?_total=accurate",
         json: true,
         headers: {
             authorization: "Bearer " + ACCESS_TOKEN
