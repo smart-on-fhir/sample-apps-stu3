@@ -14,7 +14,7 @@
     "jsonwebtoken": "^8.1.0",
     "jwk-lite": "^0.1.2",
     "jwk-to-pem": "^2.0.0",
-    "moment": "^2.27.0",
+    "moment": "^2.29.4",
     "request": "^2.88.2",
     "sqlite3": "^4.2.0",
     "uuid": "^8.0.0",
